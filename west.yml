@@ -1,0 +1,40 @@
+manifest:
+  version: 1.2
+
+  self:
+    path: dev
+
+  remotes:
+    - name: zephyr_sdk
+      url-base: https://github.com/zephyrproject-rtos
+
+    - name: tmi
+      url-base: git@github.com:trudellmedicalinternational
+
+    - name: uci
+      url-base: https://github.com/UnitCircleInc
+
+    - name: etlgit
+      url-base: https://github.com/ETLCPP
+
+
+  projects:
+    - name: zephyr
+      remote: zephyr_sdk
+      repo-path: zephyr
+      revision: v4.3.0
+      import: true
+      import:
+        file: west.yml
+        path-prefix: deps
+        name-allowlist:
+          - cmock
+          - cmsis_6
+          - cmsis-dsp
+          - hal_nordic
+          - nrfxlib
+          - mbedtls
+          - mcuboot
+          - segger
+          - tinycrypt
+          - zephyr

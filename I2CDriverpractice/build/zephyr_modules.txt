@@ -1,0 +1,6 @@
+"cmsis-dsp":"C:/Users/fayez.saad/Developer/projects/test/deps/modules/lib/cmsis-dsp":"${ZEPHYR_CMSIS_DSP_CMAKE_DIR}"
+"cmsis_6":"C:/Users/fayez.saad/Developer/projects/test/deps/modules/hal/cmsis_6":"${ZEPHYR_CMSIS_6_CMAKE_DIR}"
+"hal_nordic":"C:/Users/fayez.saad/Developer/projects/test/deps/modules/hal/nordic":"${ZEPHYR_HAL_NORDIC_CMAKE_DIR}"
+"mbedtls":"C:/Users/fayez.saad/Developer/projects/test/deps/modules/crypto/mbedtls":"${ZEPHYR_MBEDTLS_CMAKE_DIR}"
+"mcuboot":"C:/Users/fayez.saad/Developer/projects/test/deps/bootloader/mcuboot":"C:/Users/fayez.saad/Developer/projects/test/deps/bootloader/mcuboot/boot/bootutil/zephyr"
+"segger":"C:/Users/fayez.saad/Developer/projects/test/deps/modules/debug/segger":"${ZEPHYR_SEGGER_CMAKE_DIR}"

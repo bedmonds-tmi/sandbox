@@ -1,0 +1,18 @@
+config ZEPHYR_CMSIS_DSP_MODULE
+   bool
+   default y
+config ZEPHYR_CMSIS_6_MODULE
+   bool
+   default y
+config ZEPHYR_HAL_NORDIC_MODULE
+   bool
+   default y
+config ZEPHYR_MBEDTLS_MODULE
+   bool
+   default y
+config ZEPHYR_MCUBOOT_MODULE
+   bool
+   default y
+config ZEPHYR_SEGGER_MODULE
+   bool
+   default y

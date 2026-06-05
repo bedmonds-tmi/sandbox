@@ -1,0 +1,7 @@
+set(kconfig_env_dirs)
+list(APPEND kconfig_env_dirs ZEPHYR_CMSIS_DSP_MODULE_DIR=C:/Users/fayez.saad/Developer/projects/test/deps/modules/lib/cmsis-dsp)
+list(APPEND kconfig_env_dirs ZEPHYR_CMSIS_6_MODULE_DIR=C:/Users/fayez.saad/Developer/projects/test/deps/modules/hal/cmsis_6)
+list(APPEND kconfig_env_dirs ZEPHYR_HAL_NORDIC_MODULE_DIR=C:/Users/fayez.saad/Developer/projects/test/deps/modules/hal/nordic)
+list(APPEND kconfig_env_dirs ZEPHYR_MBEDTLS_MODULE_DIR=C:/Users/fayez.saad/Developer/projects/test/deps/modules/crypto/mbedtls)
+list(APPEND kconfig_env_dirs ZEPHYR_MCUBOOT_MODULE_DIR=C:/Users/fayez.saad/Developer/projects/test/deps/bootloader/mcuboot)
+list(APPEND kconfig_env_dirs ZEPHYR_SEGGER_MODULE_DIR=C:/Users/fayez.saad/Developer/projects/test/deps/modules/debug/segger)
