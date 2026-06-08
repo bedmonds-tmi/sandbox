@@ -5,16 +5,13 @@
 #define I2C_NODE DT_NODELABEL(i2c0)
 
 #define TCS3400 0x39
-
 #define SYSM_CTRL 0x80
 #define INT_FLAG 0x8C
 #define WAIT_TIME 0x83
 #define TCS_GAIN 0x8F
 #define TCS_TIME 0x81
-
 #define REVID 0x91
 #define ID 0x92
-
 #define ERROR_FLAG 0x8C
 #define RCH_DATA_L 0x96
 #define RCH_DATA_H 0x97
@@ -24,7 +21,6 @@
 #define BCH_DATA_H 0x9B
 #define IRCH_DATA_L 0x94
 #define IRCH_DATA_H 0x95
-
 #define COL_REG_COUNT 10U
 #define ID_BYTE_COUNT 2U
 
@@ -80,10 +76,6 @@ int main(void)
         printk(">green:%d\n", green);
         int16_t blue = ((int16_t)val4 << 4) | val5;
         printk(">blue:%d\n", blue);
-        /*
-        int16_t white = ((int16_t)val6 << 8) | val7;
-        printk(">white:%d\n", white);
-        */
 
         ret = tcs3400_read(ID, &x);
         if (ret == 0)
