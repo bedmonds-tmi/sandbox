@@ -1,0 +1,7 @@
+/ {
+    my_gpio: my-gpio {
+        compatible = "nordic,gpio-pins";
+        gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
+        status = "okay";
+    };
+};
