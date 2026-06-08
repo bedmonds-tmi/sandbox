@@ -1,6 +1,0 @@
-west:
-  command: C:\ncs\toolchains\936afb6332\opt\bin\Scripts\west build --build-dir c:/Users/fayez.saad/Developer/projects/test/dev/drv2605/build
-    c:/Users/fayez.saad/Developer/projects/test/dev/drv2605 --pristine --board nrf52840dk/nrf52840
-    -- -DNCS_TOOLCHAIN_VERSION=NONE -DCONFIG_DEBUG_THREAD_INFO=y
-  topdir: c:\Users\fayez.saad\Developer\projects\test
-  version: 1.5.0
