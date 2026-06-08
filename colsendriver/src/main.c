@@ -30,8 +30,8 @@
 #define COL_REG_COUNT 10U
 #define ID_BYTE_COUNT 2U
 
-#define LED0_NODE DT_ALIAS(led_en)
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+#define MY_GPIO_NODE DT_NODELABEL(my_gpio)
+static const struct gpio_dt_spec my_pin = GPIO_DT_SPEC_GET(MY_GPIO_NODE, gpios);
 
 const struct device *i2c_dev = DEVICE_DT_GET(I2C_NODE);
 
@@ -61,7 +61,11 @@ int main(void)
     cls16d24_write(CLS_GAIN, 136);
     cls16d24_write(CLS_TIME, 50);
 
-    ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+    if (!device_is_ready(my_pin.port))
+    {
+        return 0;
+    }
+    gpio_pin_configure_dt(&my_pin, GPIO_OUTPUT_ACTIVE); // LED
 
     while (1)
     {
@@ -96,6 +100,7 @@ int main(void)
          {
              printk("I2C read failed: %d\n", ret);
          } */
+        gpio_pin_set_dt(&my_pin, 1); // LED
         k_msleep(1000);
     }
 }
