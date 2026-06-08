@@ -25,12 +25,10 @@
 #define COL_REG_COUNT 10U
 #define ID_BYTE_COUNT 2U
 
-<<<<<<< HEAD:I2C_CLcolorsensing/src/main.c
 #define LED4_NODE DT_NODELABEL(whiteled)
-=======
+
 #define MY_GPIO_NODE DT_NODELABEL(my_gpio)
 static const struct gpio_dt_spec my_pin = GPIO_DT_SPEC_GET(MY_GPIO_NODE, gpios);
->>>>>>> 4ea0819 (Added TCS3400 driver):colsendriver/src/main.c
 
 const struct device *i2c_dev = DEVICE_DT_GET(I2C_NODE);
 
@@ -59,17 +57,7 @@ int main(void)
     cls16d24_write(WAIT_TIME, 0);
     cls16d24_write(CLS_GAIN, 136);
     cls16d24_write(CLS_TIME, 50);
-<<<<<<< HEAD:I2C_CLcolorsensing/src/main.c
     // ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
-=======
-
-    if (!device_is_ready(my_pin.port))
-    {
-        return 0;
-    }
-    gpio_pin_configure_dt(&my_pin, GPIO_OUTPUT_ACTIVE); // LED
-
->>>>>>> 4ea0819 (Added TCS3400 driver):colsendriver/src/main.c
     while (1)
     {
         uint8_t x, val0, val1, val2, val3, val4, val5, val6, val7;
@@ -90,21 +78,6 @@ int main(void)
         printk(">blue:%d\n", blue);
         int16_t white = ((int16_t)val6 << 8) | val7;
         printk(">white:%d\n", white);
-<<<<<<< HEAD:I2C_CLcolorsensing/src/main.c
         k_msleep(2000);
-=======
-
-        /* ret = cls16d24_read(PROD_ID_L, &x);
-         if (ret == 0)
-         {
-             printk("WHOAMI: 0x%02X\n", x);
-         }
-         else
-         {
-             printk("I2C read failed: %d\n", ret);
-         } */
-        gpio_pin_set_dt(&my_pin, 1); // LED
-        k_msleep(1000);
->>>>>>> 4ea0819 (Added TCS3400 driver):colsendriver/src/main.c
     }
 }
