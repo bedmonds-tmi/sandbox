@@ -87,6 +87,7 @@ void track_x_axis(bool enable)
     mpu6050_read(0x3C, &val1);
 
     int16_t val = ((int16_t)val0 << 8) | val1;
+
     printk(">ax:%d\n", val);
 }
 
@@ -159,9 +160,7 @@ void calibrate_temperature(void)
         sumT += val;
     }
     long avgT = sumT / 10000;
-
     temp_calibration_value = avgT;
-
     printk("temp calibration value: %ld\n", avgT);
 }
 
@@ -171,7 +170,9 @@ void track_temp(bool enable)
     mpu6050_read(0x41, &val0);
     mpu6050_read(0x42, &val1);
     int16_t val = ((int16_t)val0 << 8) | val1;
-    printk(">temp:%ld\n", (val - temp_calibration_value) / 50);
+    long rt = val / 340;
+    rt = rt + 36.53;
+    printk(">temp:%ld \n", rt);
 }
 
 void calibrate_gyroscope(void)
@@ -229,16 +230,9 @@ int main(void)
 
     mpu6050_write(0x6B, 0);
 
-    calibrate_temperature();
-    calibrate_gyroscope();
-
     while (1)
     {
         track_temp(true);
-        k_msleep(1000);
-        track_gyro_x(true);
-        track_gyro_y(true);
-        track_gyro_z(true);
         k_msleep(1000);
     }
 }
