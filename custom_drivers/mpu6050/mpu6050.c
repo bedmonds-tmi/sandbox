@@ -43,22 +43,14 @@
 long temp_calibration_value = 0;
 const struct device *i2c_dev = DEVICE_DT_GET(I2C_NODE);
 
-static int read(uint8_t reg, uint8_t *val)
+static int read_reg(uint8_t reg, uint8_t *val)
 {
 	return i2c_write_read(i2c_dev, MPU6050_I2C_ADDR, &reg, 1, val, 1);
 }
-
-static int write(uint8_t reg, uint8_t val)
+static int write_reg(uint8_t reg, uint8_t val)
 {
 	return i2c_reg_write_byte(i2c_dev, MPU6050_I2C_ADDR, reg, val);
 }
-
-int mpu6050_init(void)
-{
-	printk("mpu6050 init\n");
-	return 0;
-}
-
 static int write_to_bit(uint8_t reg, uint8_t val, uint8_t bit_pos)
 {
 	uint8_t tmp;
@@ -74,6 +66,11 @@ static int write_to_bit(uint8_t reg, uint8_t val, uint8_t bit_pos)
 	return write(reg, tmp);
 }
 
+int mpu6050_init(void)
+{
+	printk("mpu6050 init\n");
+	return 0;
+}
 int mpu6050_whoami(uint8_t *val)
 {
 	int ret;
@@ -127,23 +124,31 @@ int mpu6050_get_gyro(gyro_t *val)
 	return 0;
 }
 
+/**
+ * @brief Sets the scale range for gyroscope.
+ * @param[in] mode - integer value of range mode
+ * @details
+ * 			GYROSCOPE SENSITIVITY
+ * 			Full-Scale Range
+ * 			FS_SEL=0  ±250  º/s
+ * 			FS_SEL=1  ±500  º/s
+ * 			FS_SEL=2  ±1000  º/s
+ * 			FS_SEL=3  ±2000  º/s
+ * 			Gyroscope ADC Word Length   16  bits
+ * 			Sensitivity Scale Factor
+ * 			FS_SEL=0  131  LSB/(º/s)
+ * 			FS_SEL=1  65.5  LSB/(º/s)
+ * 			FS_SEL=2  32.8  LSB/(º/s)
+ * 			FS_SEL=3  16.4  LSB/(º/s)
+ * @retval
+ * 			- 0 on success
+ * 			- ERANGE
+ */
 int mpu6050_gyroscope_scale_range(int mode)
 {
-	// GYROSCOPE SENSITIVITY
-	//  Full-Scale Range
-	//   FS_SEL=0  ±250  º/s
-	//   FS_SEL=1  ±500  º/s
-	//   FS_SEL=2  ±1000  º/s
-	//   FS_SEL=3  ±2000  º/s
-	//  Gyroscope ADC Word Length   16  bits
-	//  Sensitivity Scale Factor
-	//	FS_SEL=0  131  LSB/(º/s)
-	//   FS_SEL=1  65.5  LSB/(º/s)
-	//   FS_SEL=2  32.8  LSB/(º/s)
-	//   FS_SEL=3  16.4  LSB/(º/s)
 	if (0 > mode || mode > 3)
 	{
-		return -1;
+		return -ERANGE;
 	}
 	switch (mode)
 	{
@@ -162,12 +167,31 @@ int mpu6050_gyroscope_scale_range(int mode)
 	}
 	return 0;
 }
-
+/**
+ * @brief Sets the scale range for Acellerometer.
+ * @param[in] mode - integer value of range mode
+ * @details
+ * 			Acellerometer SENSITIVITY
+ * 			Full-Scale Range
+ * 			FS_SEL=0  ±2  º/s
+ * 			FS_SEL=1  ±4  º/s
+ * 			FS_SEL=2  ±8  º/s
+ * 			FS_SEL=3  ±16  º/s
+ * 			acellerometer ADC Word Length   16  bits
+ * 			Sensitivity Scale Factor
+ * 			FS_SEL=0  16384  LSB/(º/s)
+ * 			FS_SEL=1  8192  LSB/(º/s)
+ * 			FS_SEL=2  4096  LSB/(º/s)
+ * 			FS_SEL=3  2048  LSB/(º/s)
+ * @retval
+ * 			- 0 on success
+ * 			- ERANGE
+ */
 int mpu6050_accelerometer_scale_range(int mode)
 {
 	if (0 > mode || mode > 3)
 	{
-		return -1;
+		return -errno;
 	}
 	switch (mode)
 	{
