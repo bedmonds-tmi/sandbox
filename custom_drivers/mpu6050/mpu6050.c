@@ -18,16 +18,16 @@
 #define MPU6050_I2C_ADDR 0x68
 #define MPU6050_SMPLRT_DIV 0x19
 #define MPU6050_CONFIG 0x1A
-#define MPU6050_GYRO_CONFIG 0x1B
+#define MPU6050_REG_GYRO_CONFIG 0x1B
 #define MPU6050_ACCEL_CONFIG 0x1C
 #define MPU6050_MOT_THR 0x1F
 #define MPU6050_FIFO_EN 0x23
 #define MPU6050_I2C_MST_CTRL
-#define MPU6050_I2C_SLV0_ADDR
-#define MPU6050_I2C_SLV0_REG
+#define MPU6050_REG_I2C_SLV0_ADDR
+#define MPU6050_REG_I2C_SLV0
 #define MPU6050_I2C_SLV0_CTRL
 #define MPU6050_I2C_SLV1_ADDR
-#define MPU6050_I2C_SLV1_REG
+#define MPU6050_REG_I2C_SLV1
 #define MPU6050_I2C_SLV1_CTRL
 #define MPU6050_I2C_SLV2_ADDR
 #define MPU6050_I2C_SLV2_REG
@@ -40,18 +40,15 @@
 #define MPU6050_I2C_SLV4_DO
 #define MPU6050_I2C_SLV4_CTRL
 
-long temp_calibration_value = 0;
-const struct device *i2c_dev = DEVICE_DT_GET(I2C_NODE);
-
-static int read_reg(uint8_t reg, uint8_t *val)
+static int read_reg(mpu6050_device_t *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(i2c_dev, MPU6050_I2C_ADDR, &reg, 1, val, 1);
+	return i2c_write_read(dev->i2c, dev->i2c_addr, &reg, 1, val, len);
 }
-static int write_reg(uint8_t reg, uint8_t val)
+static int write_reg(mpu6050_device_t *dev, uint8_t reg, uint8_t val)
 {
-	return i2c_reg_write_byte(i2c_dev, MPU6050_I2C_ADDR, reg, val);
+	return i2c_reg_write_byte(dev->i2c, MPU6050_I2C_ADDR, reg, val);
 }
-static int write_to_bit(uint8_t reg, uint8_t val, uint8_t bit_pos)
+static int write_to_bit(mpu6050_device_t *dev, uint8_t reg, uint8_t val, uint8_t bit_pos)
 {
 	uint8_t tmp;
 
@@ -61,17 +58,30 @@ static int write_to_bit(uint8_t reg, uint8_t val, uint8_t bit_pos)
 		printk("Error: %d\n", ret);
 		return ret;
 	}
-	tmp &= ~(1 << bit_pos);					  // Clear the target bit
+	tmp &= ~(1 << bit_pos);										// Clear the target bit
 	tmp |= (val << bit_pos) & (1 << bit_pos); // Set the target bit based on val
 	return write(reg, tmp);
 }
 
-int mpu6050_init(void)
+int mpu6050_init(mpu6050_device_t *dev)
 {
+	if (dev == NULL)
+	{
+		printk("Null pointer");
+		return -EINVAL;
+	}
+
 	printk("mpu6050 init\n");
+
+	if (dev->config.gyro_fs >= MPU6050_GYRO_CONF_FS_SEL_MAX)
+	{
+		printk("Gyro FS SEL is out of range.");
+		return -ERANGE;
+	}
+
 	return 0;
 }
-int mpu6050_whoami(uint8_t *val)
+int mpu6050_whoami(mpu6050_device_t *dev uint8_t *val)
 {
 	int ret;
 	uint8_t x;
@@ -88,7 +98,7 @@ int mpu6050_whoami(uint8_t *val)
 	return 0;
 }
 
-int mpu6050_get_accel(accel_t *val)
+int mpu6050_get_accel(mpu6050_device_t *dev accel_t *val)
 {
 	uint8_t val0, val1;
 
@@ -106,21 +116,13 @@ int mpu6050_get_accel(accel_t *val)
 	return 0;
 }
 
-int mpu6050_get_gyro(gyro_t *val)
+int mpu6050_get_gyro(mpu6050_gyro_t *val)
 {
-	uint8_t val0, val1;
-
-	read(0x43, &val0);
-	read(0x44, &val1);
-	val->x = ((int16_t)val0 << 8) | val1;
-
-	read(0x45, &val0);
-	read(0x46, &val1);
-	val->y = ((int16_t)val0 << 8) | val1;
-
-	read(0x47, &val0);
-	read(0x48, &val1);
-	val->z = ((int16_t)val0 << 8) | val1;
+	read_reg(0x43, val->byte, 6);
+	for (int i = 0; i < 3; i++)
+	{
+		val->bit16[i] = ((int16_t)val->byte[i * 2] << 8) | val->byte[i * 2 + 1];
+	}
 	return 0;
 }
 
@@ -221,4 +223,16 @@ int mpu6050_get_temp_C(float *tmp_C)
 	*tmp_C = (float)val / 340.0;
 	*tmp_C += 36.53;
 	return 0;
+}
+
+int get_gyro_conf(mpu6050_gyro_conf_t *conf)
+{
+	read_reg(MPU6050_REG_GYRO_CONFIG, &conf->byte[0]);
+
+	if (conf->bits.FS_SEL)
+	{
+		conf->bits.xg_st = 1;
+	}
+
+	write_reg(MPU6050_REG_GYRO_CONFIG, conf->byte[0]);
 }

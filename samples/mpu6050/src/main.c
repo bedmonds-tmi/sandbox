@@ -2,11 +2,31 @@
 #include <custom_drivers/mpu6050/mpu6050.h>
 #include <stdint.h>
 
+const struct device *i2c_dev = DEVICE_DT_GET(I2C_NODE);
+
+mpu6050_device_t imu1 = {
+		.i2c = i2c_dev,
+		.i2c_addr = 0x68,
+		.config = {
+				.gyro_fs = 6,
+		},
+};
+
+mpu6050_device_t imu2 = {
+		.i2c = i2c_dev,
+		.i2c_addr = 0x69,
+};
+
 int main(void)
 {
 	int ret = 0;
 
-	ret = mpu6050_init();
+	ret = mpu6050_init(&imu1);
+	if (ret != 0)
+	{
+		return ret;
+	}
+	ret = mpu6050_init(&imu2);
 	if (ret != 0)
 	{
 		return ret;
