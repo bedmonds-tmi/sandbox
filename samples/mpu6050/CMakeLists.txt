@@ -6,7 +6,4 @@ project(app)
 
 target_sources(app PRIVATE
 	src/main.c
-	../../custom_drivers/mpu6050/mpu6050.c
 )
-
-include_directories(../../.)

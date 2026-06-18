@@ -7,7 +7,7 @@ LOG_MODULE_REGISTER(app);
 static mpu6050_device_t imu0 = {
 	.config =
 		{
-			.i2c = DEVICE_DT_GET(DT_NODELABEL(i2c0)),
+			.i2c = DEVICE_DT_GET(DT_ALIAS(i2c0)),
 			.i2c_addr = MPU6050_I2C_ADDR0,
 			.gyro_fs = MPU6050_GYRO_CONF_FS_1000_DPS,
 			.accel_fs = MPU6050_ACCEL_CONF_FS_16_G,

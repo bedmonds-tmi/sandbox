@@ -1,0 +1,7 @@
+config CUSTOM_MPU6050
+	bool "Enable MPU6050 IMU"
+	default n
+	select I2C
+	select FPU
+  help
+    MPU6050 enable
