@@ -6,4 +6,5 @@ project(app)
 
 target_sources(app PRIVATE
 	src/main.c
+	src/hardware_config.c
 )

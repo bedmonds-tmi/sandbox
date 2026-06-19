@@ -1,0 +1,1 @@
+add_subdirectory_ifdef(CONFIG_TMI_DRIVER_MPU6050 mpu6050)

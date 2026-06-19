@@ -1,7 +1,8 @@
-config CUSTOM_MPU6050
+config TMI_DRIVER_MPU6050
 	bool "Enable MPU6050 IMU"
 	default n
 	select I2C
 	select FPU
+	select TMI_API_IMU
   help
     MPU6050 enable

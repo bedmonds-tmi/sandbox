@@ -1,1 +1,2 @@
-rsource "custom_drivers/Kconfig"
+rsource "api/Kconfig"
+rsource "drivers/Kconfig"

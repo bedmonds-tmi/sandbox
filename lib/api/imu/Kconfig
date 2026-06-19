@@ -1,0 +1,5 @@
+config TMI_API_IMU
+	bool "Enable IMU API"
+	default n
+  help
+    TMI API enable
