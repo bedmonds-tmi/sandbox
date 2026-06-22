@@ -1,0 +1,7 @@
+config CUSTOM_CLS16D24
+	bool "Enable CLS16D24"
+	default n
+	select I2C
+	select FPU
+  help
+    CLS16D24 enable
