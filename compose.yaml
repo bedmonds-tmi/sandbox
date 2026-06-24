@@ -1,0 +1,14 @@
+services:
+  zephyr-dev:
+    image: zephyr-dev
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+    ports:
+      - "8080:8080"
+    command: ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "/workspace"]
+    stdin_open: true
+    tty: true
