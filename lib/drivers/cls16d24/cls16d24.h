@@ -1,10 +1,56 @@
 #include <stdint.h>
+#include <zephyr/kernel.h>
+#include "cls16d24_defs.h"
+
+typedef union {
+	uint8_t bytes[8];
+	struct {
+		int16_t r;
+		int16_t g;
+		int16_t b;
+        int16_t w;
+    };
+} cls16d24_rgbw_t;
+
+typedef union {
+	uint8_t bytes[2];
+	struct {
+		int16_t ir;
+    };
+} cls16d24_ir_t;
+
+typedef struct {
+    const struct device *i2c;
+    const uint8_t i2c_addr;
+    cls16d24_gain_fs_t gain_fs;
+    cls16d24_int_time_fs_t int_time_fs;
+    cls16d24_int_src_fs_t int_src_fs;
+    cls16d24_diode_selt_fs_t diode_selt_fs;
+} cls16d24_config_t;
+
+typedef struct {
+	cls16d24_rgbw_t rgbw_filtered;
+	cls16d24_ir_t ir_filtered;
+} cls16d24_data_t;
+
+typedef struct {
+	cls16d24_config_t config;
+	cl16d24_data_t data;
+} cls16d24_device_t;
 
 /**
  * @brief Initalizes the CLS-16D24-44-DF8/TR8 RGBWIR sensor
  *
  */
-int cls16d24_init(void);
+int cls16d24_init(cls16d24_device_t *dev);
+int cls16d24_check_whoami(cls16d24_device_t *dev);
+int cls16d24_get_rgbw(cls16d24_device_t *dev, cls16d24_rgbw_t *val);
+int cls16d24_get_ir(cls16d24_device_t *dev, cls16d24_ir_t *val);
+int cls16d24_set_gain_fs(cls16d24_device_t *dev, cls16d24_gain_fs_t range);
+int cls16d24_set_int_time_fs(cls16d24_device_t *dev, cls16d24_int_time_fs_t range);
+int cls16d24_set_int_src_fs(cls16d24_device_t *dev, cls16d24_int_src_fs_t range);
+int cls16d24_set_diode_selt_fs(cls16d24_device_t *dev, cls16d24_diode_selt_fs_t range);
+
 
 /**
  * @brief Returns the value of the WHOAMI register
