@@ -1,0 +1,8 @@
+config CUSTOM_XGZP6897D	
+	bool "Enable xgzp6897d pressure sense"
+	default n
+	select I2C
+	select FPU
+	select TMI_API_PRESSURE
+  help
+    xgzp6897d enable
