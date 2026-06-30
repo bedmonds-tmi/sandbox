@@ -22,55 +22,54 @@ typedef struct {
 } tmi_imu_config_t;
 
 typedef struct {
+	tmi_imu_config_t config; /** Device configuration. */
 	tmi_imu_vec3_t accel_iir; /** Accelerometer raw IIR filtered data. */
 	tmi_imu_vec3_t gyro_iir;  /** Gyroscope raw IIR filtered data. */
 } tmi_imu_data_t;
 
-typedef struct tmi_imu_s tmi_imu_t;
-
 typedef struct {
-	int (*init)(tmi_imu_t *dev);
-	int (*get_accel)(tmi_imu_t *dev, tmi_imu_vec3_t *raw);
-	int (*get_gyro)(tmi_imu_t *dev, tmi_imu_vec3_t *raw);
-	int (*set_accel_fs_mG)(tmi_imu_t *dev, uint32_t mG);
-	int (*set_gyro_fs_dps)(tmi_imu_t *dev, uint32_t dps);
-	int (*get_temp_mC)(tmi_imu_t *dev, int16_t *mC);
+	int (*init)(const struct device *dev);
+	int (*get_accel)(const struct device *dev, tmi_imu_vec3_t *raw);
+	int (*get_gyro)(const struct device *dev, tmi_imu_vec3_t *raw);
+	int (*set_accel_fs_mG)(const struct device *dev, uint32_t mG);
+	int (*set_gyro_fs_dps)(const struct device *dev, uint32_t dps);
+	int (*get_temp_mC)(const struct device *dev, int16_t *mC);
 } tmi_imu_api_t;
 
-struct tmi_imu_s {
-	tmi_imu_config_t config;
-	tmi_imu_data_t data;
-	const tmi_imu_api_t *api;
-};
-
-static inline int tmi_imu_init(tmi_imu_t *dev)
+static inline int tmi_imu_init(const struct device *dev)
 {
-	return dev->api->init(dev);
+	const tmi_imu_api_t *api = (const struct tmi_imu_api_t *)dev->api;
+	return api->init(dev);
 }
 
-static inline int tmi_imu_get_accel(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
+static inline int tmi_imu_get_accel(const struct device *dev, tmi_imu_vec3_t *raw)
 {
-	return dev->api->get_accel(dev, raw);
+	const tmi_imu_api_t *api = (const struct tmi_imu_api_t *)dev->api;
+	return api->get_accel(dev, raw);
 }
 
-static inline int tmi_imu_get_gyro(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
+static inline int tmi_imu_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
 {
-	return dev->api->get_gyro(dev, raw);
+	const tmi_imu_api_t *api = (const struct tmi_imu_api_t *)dev->api;
+	return api->get_gyro(dev, raw);
 }
 
-static inline int tmi_imu_get_temp_mC(tmi_imu_t *dev, int16_t *mC)
+static inline int tmi_imu_get_temp_mC(const struct device *dev, int16_t *mC)
 {
-	return dev->api->get_temp_mC(dev, mC);
+	const tmi_imu_api_t *api = (const struct tmi_imu_api_t *)dev->api;
+	return api->get_temp_mC(dev, mC);
 }
 
-static inline int tmi_imu_set_accel_fs_mG(tmi_imu_t *dev, uint32_t mG)
+static inline int tmi_imu_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 {
-	return dev->api->set_accel_fs_mG(dev, mG);
+	const tmi_imu_api_t *api = (const struct tmi_imu_api_t *)dev->api;
+	return api->set_accel_fs_mG(dev, mG);
 }
 
-static inline int tmi_imu_set_gyro_fs_dps(tmi_imu_t *dev, uint32_t dps)
+static inline int tmi_imu_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 {
-	return dev->api->set_gyro_fs_dps(dev, dps);
+	const tmi_imu_api_t *api = (const struct tmi_imu_api_t *)dev->api;
+	return api->set_gyro_fs_dps(dev, dps);
 }
 
 #endif /* TMI_API_IMU_H */

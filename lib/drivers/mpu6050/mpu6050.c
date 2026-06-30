@@ -54,17 +54,17 @@ LOG_MODULE_REGISTER(mpu6050);
 		}                                                                                  \
 	} while (0)
 
-static int read_reg(const tmi_imu_t *dev, uint8_t reg, uint8_t *val, uint8_t len)
+static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
 	return i2c_write_read(dev->config.bus, dev->config.addr, &reg, 1, val, len);
 }
 
-static int write_reg(const tmi_imu_t *dev, uint8_t reg, uint8_t val)
+static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 {
 	return i2c_reg_write_byte(dev->config.bus, dev->config.addr, reg, val);
 }
 
-static int write_mask(tmi_imu_t *dev, uint8_t reg, uint8_t mask, uint8_t val)
+static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
 {
 	uint8_t tmp;
 
@@ -82,20 +82,22 @@ static int write_mask(tmi_imu_t *dev, uint8_t reg, uint8_t mask, uint8_t val)
 
 /**
  * @brief Verify communication with the MPU6050.
- *
- * @param[in] dev MPU6050 device instance. Must not be NULL.
- *
+ * 
  * @details Reads the WHOAMI register and checks that it matches the configured
  * I2C address.
+ *
+ * @param[in] dev MPU6050 device instance. Must not be NULL.
  *
  * @retval 0 The expected WHOAMI value was read.
  * @retval -EINVAL If @p dev is NULL.
  * @retval -ERANGE If the WHOAMI value does not match the configured address.
  * @return Negative errno from the register read operation on failure.
  */
-static int mpu6050_check_whoami(tmi_imu_t *dev)
+static int mpu6050_check_whoami(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
+
+	const tmi_imu_config_t *cfg = (const tmi_imu_config_t *)dev->config;
 
 	uint8_t x;
 	int ret = read_reg(dev, MPU6050_REG_WHOAMI, &x, sizeof(x));
@@ -105,8 +107,8 @@ static int mpu6050_check_whoami(tmi_imu_t *dev)
 	}
 
 	/* WHOAMI value will be equal to the address. */
-	if (x != dev->config.addr) {
-		LOG_ERR("WHOAMI mismatch. Got 0x%02X, expected 0x%02X", x, dev->config.addr);
+	if (x != cfg->addr) {
+		LOG_ERR("WHOAMI mismatch. Got 0x%02X, expected 0x%02X", x, cfg->addr);
 		return -ERANGE;
 	}
 
@@ -115,15 +117,15 @@ static int mpu6050_check_whoami(tmi_imu_t *dev)
 
 /**
  * @brief Update a first-order IIR filtered value.
- *
- * @param[in] filtered Previous filtered value.
- * @param[in] raw New raw sample value.
- *
+ * 
  * @details
  * Uses an alpha of 1/8:
  *
  * new_val = raw * alpha + filtered * (1 - alpha)
  *         = filtered + (raw - filtered) * alpha
+ *
+ * @param[in] filtered Previous filtered value.
+ * @param[in] raw New raw sample value.
  *
  * @return Updated filtered value.
  */
@@ -150,13 +152,18 @@ static int16_t iir_update(int16_t filtered, int16_t raw)
  * @retval 0 Accelerometer sample was read successfully.
  * @retval -EINVAL If @p dev or @p raw is NULL.
  */
-static int mpu6050_get_accel(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
+static int mpu6050_get_accel(const struct device *dev, tmi_imu_vec3_t *raw)
 {
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(raw);
 
+	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+
 	uint8_t tmp[6];
-	read_reg(dev, MPU6050_REG_ACCEL_XOUTH, tmp, sizeof(tmp));
+	int ret = read_reg(dev, MPU6050_REG_ACCEL_XOUTH, tmp, sizeof(tmp));
+	if (ret != 0) {
+		return ret;
+	}
 
 	// Big endian (high byte first, low byte second)
 	raw->x = (int16_t)(((uint16_t)tmp[0] << 8) | tmp[1]);
@@ -165,9 +172,9 @@ static int mpu6050_get_accel(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
 	// Can also use zephyr's built-in function
 	raw->z = sys_get_be16(&tmp[4]);
 
-	dev->data.accel_iir.x = iir_update(dev->data.accel_iir.x, raw->x);
-	dev->data.accel_iir.y = iir_update(dev->data.accel_iir.y, raw->y);
-	dev->data.accel_iir.z = iir_update(dev->data.accel_iir.z, raw->z);
+	data->accel_iir.x = iir_update(data->accel_iir.x, raw->x);
+	data->accel_iir.y = iir_update(data->accel_iir.y, raw->y);
+	data->accel_iir.z = iir_update(data->accel_iir.z, raw->z);
 
 	return 0;
 }
@@ -184,7 +191,7 @@ static int mpu6050_get_accel(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
  * @retval 0 Gyroscope sample was read successfully.
  * @retval -EINVAL If @p dev or @p raw is NULL.
  */
-static int mpu6050_get_gyro(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
+static int mpu6050_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
 {
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(raw);
@@ -199,9 +206,10 @@ static int mpu6050_get_gyro(tmi_imu_t *dev, tmi_imu_vec3_t *raw)
 	// Can also use zephyr's built-in function
 	raw->z = sys_get_be16(&tmp[4]);
 
-	dev->data.gyro_iir.x = iir_update(dev->data.gyro_iir.x, raw->x);
-	dev->data.gyro_iir.y = iir_update(dev->data.gyro_iir.y, raw->y);
-	dev->data.gyro_iir.z = iir_update(dev->data.gyro_iir.z, raw->z);
+	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+	data->gyro_iir.x = iir_update(data->gyro_iir.x, raw->x);
+	data->gyro_iir.y = iir_update(data->gyro_iir.y, raw->y);
+	data->gyro_iir.z = iir_update(data->gyro_iir.z, raw->z);
 
 	return 0;
 }
@@ -240,7 +248,7 @@ static mpu6050_gyro_fs_t mpu6050_dps_to_fs_sel(int32_t dps)
  * @retval -EINVAL If @p dev is NULL.
  * @return Negative errno from the register write operation on failure.
  */
-static int mpu6050_set_gyro_fs_dps(tmi_imu_t *dev, uint32_t dps)
+static int mpu6050_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 {
 	CHECK_NULL_PTR(dev);
 
@@ -297,7 +305,7 @@ static mpu6050_accel_fs_t mpu6050_mG_to_fs_sel(uint32_t mG)
  * @retval -EINVAL If @p dev is NULL.
  * @return Negative errno from the register write operation on failure.
  */
-int mpu6050_set_accel_fs_mG(tmi_imu_t *dev, uint32_t mG)
+int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 {
 	CHECK_NULL_PTR(dev);
 
@@ -329,7 +337,7 @@ int mpu6050_set_accel_fs_mG(tmi_imu_t *dev, uint32_t mG)
  * @retval 0 Temperature was read successfully.
  * @retval -EINVAL If @p dev or @p tmp_mC is NULL.
  */
-int mpu6050_get_temp_mC(tmi_imu_t *dev, int16_t *tmp_mC)
+int mpu6050_get_temp_mC(const struct device *dev, int16_t *tmp_mC)
 {
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(tmp_mC);
@@ -356,7 +364,7 @@ int mpu6050_get_temp_mC(tmi_imu_t *dev, int16_t *tmp_mC)
  * @return Negative errno from register access or range configuration on
  * failure.
  */
-static int mpu6050_init(tmi_imu_t *dev)
+static int mpu6050_init(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
 
