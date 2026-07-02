@@ -196,6 +196,8 @@ static int mpu6050_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(raw);
 
+	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+
 	uint8_t tmp[6];
 	read_reg(dev, MPU6050_REG_GYRO_XOUTH, tmp, sizeof(tmp));
 
@@ -206,7 +208,6 @@ static int mpu6050_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
 	// Can also use zephyr's built-in function
 	raw->z = sys_get_be16(&tmp[4]);
 
-	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
 	data->gyro_iir.x = iir_update(data->gyro_iir.x, raw->x);
 	data->gyro_iir.y = iir_update(data->gyro_iir.y, raw->y);
 	data->gyro_iir.z = iir_update(data->gyro_iir.z, raw->z);
@@ -252,6 +253,8 @@ static int mpu6050_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 {
 	CHECK_NULL_PTR(dev);
 
+	tmi_imu_config_t *cfg = (tmi_imu_config_t *)dev->config;
+
 	mpu6050_gyro_fs_t gyro_fs = mpu6050_dps_to_fs_sel(dps);
 
 	if (gyro_fs >= MPU6050_GYRO_CONF_FS_MAX) {
@@ -265,7 +268,7 @@ static int mpu6050_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 		return ret;
 	}
 
-	dev->config.gyro_fs_dps = dps;
+	cfg->gyro_fs_dps = dps;
 
 	return 0;
 }
@@ -309,6 +312,8 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 {
 	CHECK_NULL_PTR(dev);
 
+	tmi_imu_config_t *cfg = (tmi_imu_config_t *)dev->config;
+
 	mpu6050_accel_fs_t accel_fs = mpu6050_mG_to_fs_sel(mG);
 
 	int ret = write_mask(dev, MPU6050_REG_ACCEL_CONFIG, MPU6050_MASK_ACCEL_CONFIG_AFS_SEL,
@@ -317,7 +322,7 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 		return ret;
 	}
 
-	dev->config.accel_fs_mG = mG;
+	cfg->accel_fs_mG = mG;
 
 	return 0;
 }
@@ -368,18 +373,21 @@ static int mpu6050_init(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
 
+	const tmi_imu_config_t *cfg = (const tmi_imu_config_t *)dev->config;
+	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+
 	if (dev == NULL) {
 		LOG_ERR("Null pointer to device.");
 		return -EINVAL;
 	}
 
-	if (dev->config.bus == NULL) {
+	if (cfg->bus == NULL) {
 		LOG_ERR("Null pointer to i2c bus.");
 		return -EINVAL;
 	}
 
-	if (dev->config.addr != MPU6050_I2C_ADDR0 && dev->config.addr != MPU6050_I2C_ADDR1) {
-		LOG_ERR("Invalid I2C address: 0x%02X", dev->config.addr);
+	if (cfg->addr != MPU6050_I2C_ADDR0 && cfg->addr != MPU6050_I2C_ADDR1) {
+		LOG_ERR("Invalid I2C address: 0x%02X", cfg->addr);
 		return -EINVAL;
 	}
 
@@ -395,13 +403,13 @@ static int mpu6050_init(const struct device *dev)
 		return ret;
 	}
 
-	ret = mpu6050_set_gyro_fs_dps(dev, dev->config.gyro_fs_dps);
+	ret = mpu6050_set_gyro_fs_dps(dev, cfg->gyro_fs_dps);
 	if (ret != 0) {
 		LOG_ERR("Init failed, could not set gyro fs (Err %d).", ret);
 		return ret;
 	}
 
-	ret = mpu6050_set_accel_fs_mG(dev, dev->config.accel_fs_mG);
+	ret = mpu6050_set_accel_fs_mG(dev, cfg->accel_fs_mG);
 	if (ret != 0) {
 		LOG_ERR("Init failed, could not set accel fs (Err %d).", ret);
 		return ret;
@@ -421,8 +429,8 @@ static int mpu6050_init(const struct device *dev)
 		return ret;
 	}
 
-	dev->data.accel_iir = accel;
-	dev->data.gyro_iir = gyro;
+	data->accel_iir = accel;
+	data->gyro_iir = gyro;
 
 	LOG_INF("Initialized");
 	return 0;
