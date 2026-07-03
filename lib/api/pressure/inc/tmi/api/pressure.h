@@ -50,7 +50,7 @@ typedef struct {
 	int (*get_whoami)(tmi_pressure_t *dev);
 	int (*get_humidity)(tmi_pressure_t *dev, float *RH);
 	int (*get_pressure)(tmi_pressure_t *dev, float *Pascals);
-	int (*get_tempurature)(tmi_pressure_t *dev, float *degC);
+	int (*get_tempurature)(tmi_pressure_t *dev, double *degC);
 } tmi_pressure_api_t;
 
 struct tmi_pressure_s {
@@ -77,7 +77,7 @@ static inline int tmi_pressure_get_pressure(tmi_pressure_t *dev, float *pa)
 	return dev->api->get_pressure(dev, pa);
 }
 
-static inline int tmi_pressure_get_temp_mC(tmi_pressure_t *dev, float *mC)
+static inline int tmi_pressure_get_temp_mC(tmi_pressure_t *dev, double *mC)
 {
 	return dev->api->get_tempurature(dev, mC);
 }
