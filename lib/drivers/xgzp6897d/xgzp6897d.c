@@ -31,17 +31,17 @@ LOG_MODULE_REGISTER(xgzp6897d);
 	} while (0)
 
 // device, address, where you want to put it, lenght
-static int read_reg(const tmi_pressure_t *dev, uint8_t reg, uint8_t *val, uint8_t len)
+static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(dev->config.bus, dev->config.addr, &reg, 1, val, len);
+	return i2c_write_read(dev->config->bus, dev->config->addr, &reg, 1, val, len);
 }
 
-static int write_reg(const tmi_pressure_t *dev, uint8_t reg, uint8_t val)
+static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 {
-	return i2c_reg_write_byte(dev->config.bus, dev->config.addr, reg, val);
+	return i2c_reg_write_byte(dev->config->bus, dev->config->addr, reg, val);
 }
 
-static int write_mask(tmi_pressure_t *dev, uint8_t reg, uint8_t mask, uint8_t val)
+static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
 {
 	uint8_t tmp;
 
@@ -68,9 +68,10 @@ static int write_mask(tmi_pressure_t *dev, uint8_t reg, uint8_t mask, uint8_t va
  * @retval -ERANGE If the WHOAMI value does not match the configured address.
  * @return Negative errno from the register read operation on failure.
  */
-static int xgzp6897d_whoami(tmi_pressure_t *dev)
+static int xgzp6897d_whoami(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
+	const tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
 	uint8_t tmp;
 	int ret = read_reg(dev, XGZP6897D_REGISTER_WHOAMI, &tmp, sizeof(tmp));
 	if (ret != 0) {
@@ -95,7 +96,7 @@ static int xgzp6897d_whoami(tmi_pressure_t *dev)
  * @retval 0 The expected if completed Nominally.
  * @return Negative errno from the register read operation on failure.
  */
-static int xgzp6897d_get_temp(tmi_pressure_t *dev, double *temp_C)
+static int xgzp6897d_get_temp(const struct device *dev, double *temp_C)
 {
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(temp_C);
@@ -150,7 +151,7 @@ static int xgzp6897d_get_temp(tmi_pressure_t *dev, double *temp_C)
  * @retval 0 The expected if completed Nominally.
  * @return Negative errno from the register read operation on failure.
  */
-static int xgzp6897d_get_pressure(tmi_pressure_t *dev, float *press_Pa)
+static int xgzp6897d_get_pressure(const struct device *dev, float *press_Pa)
 {
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(press_Pa);
@@ -180,13 +181,13 @@ static int xgzp6897d_get_pressure(tmi_pressure_t *dev, float *press_Pa)
  * @details function parameters are required to have though this function does nothign
  * @retval 0 action prefromes nothing
  *  */
-static int xgzp6897d_get_humidity(tmi_pressure_t *dev, float *RH)
+static int xgzp6897d_get_humidity(const struct device *dev, float *RH)
 {
 	LOG_PRINTK("Device cannot measure this parameter");
 	return 0;
 }
 
-static int xgzp6897d_init_all_default(tmi_pressure_t *dev)
+static int xgzp6897d_init_all_default(const struct device *dev)
 {
 	LOG_PRINTK("Device does not require initilization procedure");
 	return 0;

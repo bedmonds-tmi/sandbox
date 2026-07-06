@@ -56,12 +56,12 @@ LOG_MODULE_REGISTER(mpu6050);
 
 static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(dev->config.bus, dev->config.addr, &reg, 1, val, len);
+	return i2c_write_read(dev->config->bus, dev->config->addr, &reg, 1, val, len);
 }
 
 static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 {
-	return i2c_reg_write_byte(dev->config.bus, dev->config.addr, reg, val);
+	return i2c_reg_write_byte(dev->config->bus, dev->config->addr, reg, val);
 }
 
 static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
@@ -82,7 +82,7 @@ static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8
 
 /**
  * @brief Verify communication with the MPU6050.
- * 
+ *
  * @details Reads the WHOAMI register and checks that it matches the configured
  * I2C address.
  *
@@ -117,7 +117,7 @@ static int mpu6050_check_whoami(const struct device *dev)
 
 /**
  * @brief Update a first-order IIR filtered value.
- * 
+ *
  * @details
  * Uses an alpha of 1/8:
  *
@@ -322,7 +322,11 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 		return ret;
 	}
 
+<<<<<<< HEAD
 	cfg->accel_fs_mG = mG;
+=======
+	dev->config->accel_fs_mG = mG;
+>>>>>>> 14aaac7 (WIP)
 
 	return 0;
 }
@@ -381,13 +385,22 @@ static int mpu6050_init(const struct device *dev)
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	if (cfg->bus == NULL) {
+=======
+	if (dev->config->bus == NULL) {
+>>>>>>> 14aaac7 (WIP)
 		LOG_ERR("Null pointer to i2c bus.");
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	if (cfg->addr != MPU6050_I2C_ADDR0 && cfg->addr != MPU6050_I2C_ADDR1) {
 		LOG_ERR("Invalid I2C address: 0x%02X", cfg->addr);
+=======
+	if (dev->config->addr != MPU6050_I2C_ADDR0 && dev->config.addr != MPU6050_I2C_ADDR1) {
+		LOG_ERR("Invalid I2C address: 0x%02X", dev->config->addr);
+>>>>>>> 14aaac7 (WIP)
 		return -EINVAL;
 	}
 
@@ -403,13 +416,21 @@ static int mpu6050_init(const struct device *dev)
 		return ret;
 	}
 
+<<<<<<< HEAD
 	ret = mpu6050_set_gyro_fs_dps(dev, cfg->gyro_fs_dps);
+=======
+	ret = mpu6050_set_gyro_fs_dps(dev, dev->config->gyro_fs_dps);
+>>>>>>> 14aaac7 (WIP)
 	if (ret != 0) {
 		LOG_ERR("Init failed, could not set gyro fs (Err %d).", ret);
 		return ret;
 	}
 
+<<<<<<< HEAD
 	ret = mpu6050_set_accel_fs_mG(dev, cfg->accel_fs_mG);
+=======
+	ret = mpu6050_set_accel_fs_mG(dev, dev->config->accel_fs_mG);
+>>>>>>> 14aaac7 (WIP)
 	if (ret != 0) {
 		LOG_ERR("Init failed, could not set accel fs (Err %d).", ret);
 		return ret;
@@ -429,8 +450,13 @@ static int mpu6050_init(const struct device *dev)
 		return ret;
 	}
 
+<<<<<<< HEAD
 	data->accel_iir = accel;
 	data->gyro_iir = gyro;
+=======
+	dev->data->accel_iir = accel;
+	dev->data->gyro_iir = gyro;
+>>>>>>> 14aaac7 (WIP)
 
 	LOG_INF("Initialized");
 	return 0;

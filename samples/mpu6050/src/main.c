@@ -4,7 +4,7 @@
 
 LOG_MODULE_REGISTER(app);
 
-extern tmi_imu_t imu0;
+extern const tmi_imu_t imu0;
 
 #define ERROR_LOOP(...)                                                                            \
 	do {                                                                                       \

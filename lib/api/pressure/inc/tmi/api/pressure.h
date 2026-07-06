@@ -34,52 +34,49 @@ typedef struct {
 	uint8_t hum;
 	uint8_t temp;
 	uint8_t press;
-
 } tmi_pressure_config_t;
 
 typedef struct {
 	int32_t t_fine;
 	int32_t t_fine_adjust;
+	uint32_t offset;
 	bme280_cal_t cal;
 } tmi_pressure_data_t;
 
-typedef struct tmi_pressure_s tmi_pressure_t;
-
 typedef struct {
-	int (*init)(tmi_pressure_t *dev);
-	int (*get_whoami)(tmi_pressure_t *dev);
-	int (*get_humidity)(tmi_pressure_t *dev, float *RH);
-	int (*get_pressure)(tmi_pressure_t *dev, float *Pascals);
-	int (*get_tempurature)(tmi_pressure_t *dev, double *degC);
+	int (*init)(const struct device *dev);
+	int (*get_whoami)(const struct device *dev);
+	int (*get_humidity)(const struct device *dev, float *RH);
+	int (*get_pressure)(const struct device *dev, float *Pascals);
+	int (*get_tempurature)(const struct device *dev, double *degC);
 } tmi_pressure_api_t;
 
-struct tmi_pressure_s {
-	tmi_pressure_config_t config;
-	tmi_pressure_data_t data;
-	const tmi_pressure_api_t *api;
-};
-
-static inline int tmi_pressure_init(tmi_pressure_t *dev)
+static inline int tmi_pressure_init(const struct device *dev)
 {
-	return dev->api->init(dev);
+	const tmi_pressure_api_t *api = (const tmi_pressure_api_t *)dev->api;
+	return api->init(dev);
 }
-static inline int tmi_pressure_whoami(tmi_pressure_t *dev)
+static inline int tmi_pressure_whoami(const struct device *dev)
 {
-	return dev->api->get_whoami(dev);
+	const tmi_pressure_api_t *api = (const tmi_pressure_api_t *)dev->api;
+	return api->get_whoami(dev);
 }
-static inline int tmi_pressure_get_humidity(tmi_pressure_t *dev, float *rh)
+static inline int tmi_pressure_get_humidity(const struct device *dev, float *rh)
 {
-	return dev->api->get_humidity(dev, rh);
+	const tmi_pressure_api_t *api = (const tmi_pressure_api_t *)dev->api;
+	return api->get_humidity(dev, rh);
 }
 
-static inline int tmi_pressure_get_pressure(tmi_pressure_t *dev, float *pa)
+static inline int tmi_pressure_get_pressure(const struct device *dev, float *pa)
 {
-	return dev->api->get_pressure(dev, pa);
+	const tmi_pressure_api_t *api = (const tmi_pressure_api_t *)dev->api;
+	return api->get_pressure(dev, pa);
 }
 
-static inline int tmi_pressure_get_temp_mC(tmi_pressure_t *dev, double *mC)
+static inline int tmi_pressure_get_temp_mC(const struct device *dev, double *mC)
 {
-	return dev->api->get_tempurature(dev, mC);
+	const tmi_pressure_api_t *api = (const tmi_pressure_api_t *)dev->api;
+	return api->get_tempurature(dev, mC);
 }
 
 #endif /* TMI_API_PRESSURE_H */
