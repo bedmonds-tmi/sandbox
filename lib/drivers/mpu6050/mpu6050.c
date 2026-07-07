@@ -56,11 +56,13 @@ LOG_MODULE_REGISTER(mpu6050);
 
 static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(dev->config->bus, dev->config->addr, &reg, 1, val, len);
+	const tmi_imu_config_t *cfg = (const tmi_imu_config_t *)dev->config;
+	return i2c_write_read(cfg->bus, cfg->addr, &reg, 1, val, len);
 }
 
 static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 {
+	const tmi_imu_config_t *cfg = (const tmi_imu_config_t *)dev->config;
 	return i2c_reg_write_byte(dev->config->bus, dev->config->addr, reg, val);
 }
 
@@ -324,8 +326,7 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 
 <<<<<<< HEAD
 	cfg->accel_fs_mG = mG;
-=======
-	dev->config->accel_fs_mG = mG;
+	== == == = dev->config->accel_fs_mG = mG;
 >>>>>>> 14aaac7 (WIP)
 
 	return 0;
@@ -387,86 +388,85 @@ static int mpu6050_init(const struct device *dev)
 
 <<<<<<< HEAD
 	if (cfg->bus == NULL) {
-=======
-	if (dev->config->bus == NULL) {
+		== == == = if (dev->config->bus == NULL)
+		{
 >>>>>>> 14aaac7 (WIP)
-		LOG_ERR("Null pointer to i2c bus.");
-		return -EINVAL;
-	}
+			LOG_ERR("Null pointer to i2c bus.");
+			return -EINVAL;
+		}
 
 <<<<<<< HEAD
-	if (cfg->addr != MPU6050_I2C_ADDR0 && cfg->addr != MPU6050_I2C_ADDR1) {
-		LOG_ERR("Invalid I2C address: 0x%02X", cfg->addr);
-=======
-	if (dev->config->addr != MPU6050_I2C_ADDR0 && dev->config.addr != MPU6050_I2C_ADDR1) {
-		LOG_ERR("Invalid I2C address: 0x%02X", dev->config->addr);
+		if (cfg->addr != MPU6050_I2C_ADDR0 && cfg->addr != MPU6050_I2C_ADDR1) {
+			LOG_ERR("Invalid I2C address: 0x%02X", cfg->addr);
+			== == == = if (dev->config->addr != MPU6050_I2C_ADDR0 &&
+				       dev->config.addr != MPU6050_I2C_ADDR1)
+			{
+				LOG_ERR("Invalid I2C address: 0x%02X", dev->config->addr);
 >>>>>>> 14aaac7 (WIP)
-		return -EINVAL;
-	}
+				return -EINVAL;
+			}
 
-	int ret = mpu6050_check_whoami(dev);
-	if (ret != 0) {
-		return -ERANGE;
-	}
+			int ret = mpu6050_check_whoami(dev);
+			if (ret != 0) {
+				return -ERANGE;
+			}
 
-	// Exit sleep mode by clearing sleep bit in PWR_MGMT_1
-	ret = write_mask(dev, MPU6050_REG_PWR_MGMT_1, MPU6050_MASK_PWR_MGMT_1_SLEEP, 0);
-	if (ret != 0) {
-		LOG_ERR("Failed to write to wake device: %d", ret);
-		return ret;
-	}
+			// Exit sleep mode by clearing sleep bit in PWR_MGMT_1
+			ret = write_mask(dev, MPU6050_REG_PWR_MGMT_1, MPU6050_MASK_PWR_MGMT_1_SLEEP,
+					 0);
+			if (ret != 0) {
+				LOG_ERR("Failed to write to wake device: %d", ret);
+				return ret;
+			}
 
 <<<<<<< HEAD
-	ret = mpu6050_set_gyro_fs_dps(dev, cfg->gyro_fs_dps);
-=======
-	ret = mpu6050_set_gyro_fs_dps(dev, dev->config->gyro_fs_dps);
+			ret = mpu6050_set_gyro_fs_dps(dev, cfg->gyro_fs_dps);
+			== == == = ret = mpu6050_set_gyro_fs_dps(dev, dev->config->gyro_fs_dps);
 >>>>>>> 14aaac7 (WIP)
-	if (ret != 0) {
-		LOG_ERR("Init failed, could not set gyro fs (Err %d).", ret);
-		return ret;
-	}
+			if (ret != 0) {
+				LOG_ERR("Init failed, could not set gyro fs (Err %d).", ret);
+				return ret;
+			}
 
 <<<<<<< HEAD
-	ret = mpu6050_set_accel_fs_mG(dev, cfg->accel_fs_mG);
-=======
-	ret = mpu6050_set_accel_fs_mG(dev, dev->config->accel_fs_mG);
+			ret = mpu6050_set_accel_fs_mG(dev, cfg->accel_fs_mG);
+			== == == = ret = mpu6050_set_accel_fs_mG(dev, dev->config->accel_fs_mG);
 >>>>>>> 14aaac7 (WIP)
-	if (ret != 0) {
-		LOG_ERR("Init failed, could not set accel fs (Err %d).", ret);
-		return ret;
-	}
+			if (ret != 0) {
+				LOG_ERR("Init failed, could not set accel fs (Err %d).", ret);
+				return ret;
+			}
 
-	// Initialize filters
-	tmi_imu_vec3_t accel;
-	tmi_imu_vec3_t gyro;
+			// Initialize filters
+			tmi_imu_vec3_t accel;
+			tmi_imu_vec3_t gyro;
 
-	ret = mpu6050_get_accel(dev, &accel);
-	if (ret != 0) {
-		return ret;
-	}
+			ret = mpu6050_get_accel(dev, &accel);
+			if (ret != 0) {
+				return ret;
+			}
 
-	ret = mpu6050_get_gyro(dev, &gyro);
-	if (ret != 0) {
-		return ret;
-	}
+			ret = mpu6050_get_gyro(dev, &gyro);
+			if (ret != 0) {
+				return ret;
+			}
 
 <<<<<<< HEAD
-	data->accel_iir = accel;
-	data->gyro_iir = gyro;
-=======
-	dev->data->accel_iir = accel;
-	dev->data->gyro_iir = gyro;
+			data->accel_iir = accel;
+			data->gyro_iir = gyro;
+			== == == = dev->data->accel_iir = accel;
+			dev->data->gyro_iir = gyro;
 >>>>>>> 14aaac7 (WIP)
 
-	LOG_INF("Initialized");
-	return 0;
-}
+			LOG_INF("Initialized");
+			return 0;
+		}
 
-const tmi_imu_api_t mpu6050_api = {
-	.init = mpu6050_init,
-	.get_accel = mpu6050_get_accel,
-	.get_gyro = mpu6050_get_gyro,
-	.set_accel_fs_mG = mpu6050_set_accel_fs_mG,
-	.set_gyro_fs_dps = mpu6050_set_gyro_fs_dps,
-	.get_temp_mC = mpu6050_get_temp_mC,
-};
+		const tmi_imu_api_t mpu6050_api = {
+			.init = mpu6050_init,
+			.get_accel = mpu6050_get_accel,
+			.get_gyro = mpu6050_get_gyro,
+			.set_accel_fs_mG = mpu6050_set_accel_fs_mG,
+			.set_gyro_fs_dps = mpu6050_set_gyro_fs_dps,
+			.get_temp_mC = mpu6050_get_temp_mC,
+		};

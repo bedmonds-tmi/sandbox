@@ -32,17 +32,19 @@ LOG_MODULE_REGISTER(bme280);
 #define BME280_VALUE_RESET 0xB6
 
 // device, address, where you want to put it, lenght
-static int read_reg(const tmi_pressure_t *dev, uint8_t reg, uint8_t *val, uint8_t len)
+static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(dev->config.bus, dev->config.addr, &reg, 1, val, len);
+	const tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	return i2c_write_read(cfg->bus, cfg->addr, &reg, 1, val, len);
 }
 
-static int write_reg(const tmi_pressure_t *dev, uint8_t reg, uint8_t val)
+static int write_reg(const const struct device *dev, uint8_t reg, uint8_t val)
 {
-	return i2c_reg_write_byte(dev->config.bus, dev->config.addr, reg, val);
+	const tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	return i2c_reg_write_byte(cfg->bus, cfg->addr, reg, val);
 }
 
-static int write_mask(tmi_pressure_t *dev, uint8_t reg, uint8_t mask, uint8_t val)
+static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
 {
 	uint8_t tmp;
 
@@ -59,64 +61,64 @@ static int write_mask(tmi_pressure_t *dev, uint8_t reg, uint8_t mask, uint8_t va
 /*!
  *   @brief  Reads the factory-set coefficients
  */
-static int bme280_readCoefficients(tmi_pressure_t *dev)
+static int bme280_readCoefficients(const struct device *dev)
 {
-
+	tmi_pressure_data_t *data = (const tmi_pressure_data_t *)dev->data;
 	uint8_t val[2];
 
 	read_reg(dev, BME280_REGISTER_DIG_T1, val, sizeof(val));
-	dev->data.cal.dig_T1 = sys_get_le16(val);
+	data->cal.dig_T1 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_T2, val, sizeof(val));
-	dev->data.cal.dig_T2 = sys_get_le16(val);
+	data->cal.dig_T2 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_T3, val, sizeof(val));
-	dev->data.cal.dig_T3 = sys_get_le16(val);
+	data->cal.dig_T3 = sys_get_le16(val);
 
 	read_reg(dev, BME280_REGISTER_DIG_P1, val, sizeof(val));
-	dev->data.cal.dig_P1 = sys_get_le16(val);
+	data->cal.dig_P1 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P2, val, sizeof(val));
-	dev->data.cal.dig_P2 = sys_get_le16(val);
+	data->cal.dig_P2 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P3, val, sizeof(val));
-	dev->data.cal.dig_P3 = sys_get_le16(val);
+	data->cal.dig_P3 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P4, val, sizeof(val));
-	dev->data.cal.dig_P4 = sys_get_le16(val);
+	data->cal.dig_P4 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P5, val, sizeof(val));
-	dev->data.cal.dig_P5 = sys_get_le16(val);
+	data->cal.dig_P5 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P6, val, sizeof(val));
-	dev->data.cal.dig_P6 = sys_get_le16(val);
+	data->cal.dig_P6 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P7, val, sizeof(val));
-	dev->data.cal.dig_P7 = sys_get_le16(val);
+	data->cal.dig_P7 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P8, val, sizeof(val));
-	dev->data.cal.dig_P8 = sys_get_le16(val);
+	data->cal.dig_P8 = sys_get_le16(val);
 	read_reg(dev, BME280_REGISTER_DIG_P9, val, sizeof(val));
-	dev->data.cal.dig_P9 = sys_get_le16(val);
+	data->cal.dig_P9 = sys_get_le16(val);
 
 	uint8_t val1, val2;
 
 	read_reg(dev, BME280_REGISTER_DIG_H1, &val1, sizeof(val1));
-	dev->data.cal.dig_H1 = val1;
+	data->cal.dig_H1 = val1;
 
 	read_reg(dev, BME280_REGISTER_DIG_H2, val, sizeof(val));
-	dev->data.cal.dig_H2 = sys_get_le16(val);
+	data->cal.dig_H2 = sys_get_le16(val);
 
 	read_reg(dev, BME280_REGISTER_DIG_H3, &val1, sizeof(val1));
-	dev->data.cal.dig_H3 = val1;
+	data->cal.dig_H3 = val1;
 
 	read_reg(dev, BME280_REGISTER_DIG_H4, &val1, sizeof(val));
 	read_reg(dev, BME280_REGISTER_DIG_H4 + 1, &val2, sizeof(val2));
-	dev->data.cal.dig_H4 = (val1 << 4) | (val2 & 0xF);
+	data->cal.dig_H4 = (val1 << 4) | (val2 & 0xF);
 
 	read_reg(dev, BME280_REGISTER_DIG_H5 + 1, &val1, sizeof(val1));
 	read_reg(dev, BME280_REGISTER_DIG_H4, &val2, sizeof(val2));
 
-	dev->data.cal.dig_H5 = ((val1) << 4) | (val2 >> 4);
+	data->cal.dig_H5 = ((val1) << 4) | (val2 >> 4);
 
 	read_reg(dev, BME280_REGISTER_DIG_H6, &val1, sizeof(val1));
-	dev->data.cal.dig_H6 = val1;
+	data->cal.dig_H6 = val1;
 
 	return 0;
 }
 
-static int bme280_whoami(tmi_pressure_t *dev)
+static int bme280_whoami(const struct device *dev)
 {
 	if (dev == NULL) {
 		return -EINVAL;
@@ -130,7 +132,7 @@ static int bme280_whoami(tmi_pressure_t *dev)
 	return 0;
 }
 
-static int bme280_reset(tmi_pressure_t *dev)
+static int bme280_reset(const struct device *dev)
 {
 	if (dev == NULL) {
 		return -EINVAL;
@@ -145,7 +147,7 @@ static int bme280_reset(tmi_pressure_t *dev)
 	return 0;
 }
 
-static int bme280_activate_device(tmi_pressure_t *dev)
+static int bme280_activate_device(const struct device *dev)
 {
 	uint8_t val;
 	int ret = read_reg(dev, BME280_REGISTER_CONTROL, &val, sizeof(val));
@@ -177,8 +179,9 @@ static bme280_scale_general_t bme280_num_to_scale_sel(uint32_t factor)
 	}
 }
 
-static int bme280_init_humidity(tmi_pressure_t *dev, uint8_t num)
+static int bme280_init_humidity(const struct device *dev, uint8_t num)
 {
+
 	if (num >= BME280_GENERAL_OS_x16 && num < 0) {
 		printk("Invalid gyro fs range.");
 		return -ERANGE;
@@ -189,7 +192,8 @@ static int bme280_init_humidity(tmi_pressure_t *dev, uint8_t num)
 	if (ret != 0) {
 		return ret;
 	}
-	dev->config.hum = num;
+	tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	cfg->hum = num;
 	uint8_t x;
 	read_reg(dev, BME280_REGISTER_CONTROLHUMID, &x, sizeof(x));
 	printk("reading of control register 0x%02X", x);
@@ -197,7 +201,7 @@ static int bme280_init_humidity(tmi_pressure_t *dev, uint8_t num)
 	return 0;
 }
 
-static int bme280_init_temperature(tmi_pressure_t *dev, uint8_t num)
+static int bme280_init_temperature(const struct device *dev, uint8_t num)
 {
 
 	if (num >= BME280_GENERAL_OS_x16 && num < 0) {
@@ -210,11 +214,12 @@ static int bme280_init_temperature(tmi_pressure_t *dev, uint8_t num)
 	if (ret != 0) {
 		return ret;
 	}
-	dev->config.temp = num;
+	tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	cfg->temp = num;
 	return 0;
 }
 
-static int bme280_init_presssure(tmi_pressure_t *dev, uint8_t num)
+static int bme280_init_presssure(const struct device *dev, uint8_t num)
 {
 	if (num >= BME280_GENERAL_OS_x16 && num < 0) {
 		printk("Invalid gyro fs range.");
@@ -226,13 +231,14 @@ static int bme280_init_presssure(tmi_pressure_t *dev, uint8_t num)
 	if (ret != 0) {
 		return ret;
 	}
-
-	dev->config.press = num;
+	tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	cfg->press = num;
 	return 0;
 }
 
-static int bme280_get_temp(tmi_pressure_t *dev, float *temp_C)
+static int bme280_get_temp(const struct device *dev, float *temp_C)
 {
+	tmi_pressure_data_t *data = (const tmi_pressure_data_t *)dev->data;
 	uint8_t tmp[3];
 	uint32_t combined_data;
 	read_reg(dev, BME280_REGISTER_TEMPDATA_H, tmp, sizeof(tmp));
@@ -242,43 +248,44 @@ static int bme280_get_temp(tmi_pressure_t *dev, float *temp_C)
 	combined_data |= (uint32_t)tmp[2] && 0xF0;
 	// printk("0x%04X \n", combined_data);
 	int32_t var1, var2;
-	var1 = ((combined_data / 8) - ((int32_t)dev->data.cal.dig_T1 * 2));
-	var1 = (var1 * ((int32_t)dev->data.cal.dig_T2)) / 2048;
-	var2 = ((combined_data / 16) - ((int32_t)dev->data.cal.dig_T1));
-	var2 = (((var2 * var2) / 4096) * ((int32_t)dev->data.cal.dig_T3)) / 16384;
-	dev->data.t_fine = var1 + var2 + dev->data.t_fine_adjust;
-	int32_t T = (dev->data.t_fine * 5 + 128) / 256;
-	// printk("check if t_fine is updated : %.3f \n", (float)dev->data.t_fine);
+	var1 = ((combined_data / 8) - ((int32_t)data->cal.dig_T1 * 2));
+	var1 = (var1 * ((int32_t)data->cal.dig_T2)) / 2048;
+	var2 = ((combined_data / 16) - ((int32_t)data->cal.dig_T1));
+	var2 = (((var2 * var2) / 4096) * ((int32_t)data->cal.dig_T3)) / 16384;
+	data->t_fine = var1 + var2 + data->t_fine_adjust;
+	int32_t T = (data->t_fine * 5 + 128) / 256;
+	// printk("check if t_fine is updated : %.3f \n", (float)data->t_fine);
 	// printk("temperature from function : %.3f \n", (float)T / 100);
 	*temp_C = (float)T / 100;
 	return 0;
 }
 
-static int bme280_get_humidity(tmi_pressure_t *dev, float *hum_RH)
+static int bme280_get_humidity(const struct device *dev, float *hum_RH)
 {
+
 	uint8_t tmp[2];
 	read_reg(dev, BME280_REGISTER_HUMIDDATA_H, tmp, sizeof(tmp));
 	// printk("0x%02X  0x%02X \n", tmp[0], tmp[1]);
 	uint16_t raw = sys_get_be16(&tmp[0]);
-
+	tmi_pressure_data_t *data = (const tmi_pressure_data_t *)dev->data;
 	int32_t var1, var2, var3, var4, var5;
 	float temp;
 	int ret = bme280_get_temp(dev, &temp);
 	if (ret != 0) {
 		return ret;
 	} // must be done first to get t_fine
-	var1 = dev->data.t_fine - ((int32_t)76800);
+	var1 = data->t_fine - ((int32_t)76800);
 	var2 = (int32_t)(raw * 16384);
-	var3 = (int32_t)(((int32_t)dev->data.cal.dig_H4) * 1048576);
-	var4 = ((int32_t)dev->data.cal.dig_H4) * var1;
+	var3 = (int32_t)(((int32_t)data->cal.dig_H4) * 1048576);
+	var4 = ((int32_t)data->cal.dig_H4) * var1;
 	var5 = (((var2 - var3) - var4) + (int32_t)16384) / 32768;
-	var2 = (var1 * ((int32_t)dev->data.cal.dig_H6)) / 1024;
-	var3 = (var1 * ((int32_t)dev->data.cal.dig_H3)) / 2048;
+	var2 = (var1 * ((int32_t)data->cal.dig_H6)) / 1024;
+	var3 = (var1 * ((int32_t)data->cal.dig_H3)) / 2048;
 	var4 = ((var2 * (var3 + (int32_t)32768)) / 1024) + (int32_t)2097152;
-	var2 = ((var4 * ((int32_t)dev->data.cal.dig_H2)) + 8192) / 16384;
+	var2 = ((var4 * ((int32_t)data->cal.dig_H2)) + 8192) / 16384;
 	var3 = var5 * var2;
 	var4 = ((var3 / 32768) * (var3 / 32768)) / 128;
-	var5 = var3 - ((var4 * ((int32_t)dev->data.cal.dig_H1)) / 16);
+	var5 = var3 - ((var4 * ((int32_t)data->cal.dig_H1)) / 16);
 	var5 = (var5 < 0 ? 0 : var5);
 	var5 = (var5 > 419430400 ? 419430400 : var5);
 	uint32_t H = (uint32_t)(var5 / 4096);
@@ -287,8 +294,9 @@ static int bme280_get_humidity(tmi_pressure_t *dev, float *hum_RH)
 	return 0;
 }
 
-static int bme280_get_pressure(tmi_pressure_t *dev, float *press_Pa)
+static int bme280_get_pressure(const struct device *dev, float *press_Pa)
 {
+	tmi_pressure_data_t *data = (const tmi_pressure_data_t *)dev->data;
 	uint8_t tmp[3];
 	uint32_t combined_data;
 	read_reg(dev, BME280_REGISTER_TEMPDATA_H, tmp, sizeof(tmp));
@@ -305,14 +313,14 @@ static int bme280_get_pressure(tmi_pressure_t *dev, float *press_Pa)
 		return ret;
 	}
 
-	var1 = ((int64_t)dev->data.t_fine) - 128000;
-	var2 = var1 * var1 * (int64_t)dev->data.cal.dig_P6;
-	var2 = var2 + ((var1 * (int64_t)dev->data.cal.dig_P5) * 131072);
-	var2 = var2 + (((int64_t)dev->data.cal.dig_P4) * 34359738368);
-	var1 = ((var1 * var1 * (int64_t)dev->data.cal.dig_P3) / 256) +
-	       ((var1 * ((int64_t)dev->data.cal.dig_P2) * 4096));
+	var1 = ((int64_t)data->t_fine) - 128000;
+	var2 = var1 * var1 * (int64_t)data->cal.dig_P6;
+	var2 = var2 + ((var1 * (int64_t)data->cal.dig_P5) * 131072);
+	var2 = var2 + (((int64_t)data->cal.dig_P4) * 34359738368);
+	var1 = ((var1 * var1 * (int64_t)data->cal.dig_P3) / 256) +
+	       ((var1 * ((int64_t)data->cal.dig_P2) * 4096));
 	var3 = ((int64_t)1) * 140737488355328;
-	var1 = (var3 + var1) * ((int64_t)dev->data.cal.dig_P1) / 8589934592;
+	var1 = (var3 + var1) * ((int64_t)data->cal.dig_P1) / 8589934592;
 
 	if (var1 == 0) {
 		return 0; // avoid exception caused by division by zero
@@ -320,17 +328,17 @@ static int bme280_get_pressure(tmi_pressure_t *dev, float *press_Pa)
 
 	var4 = 1048576 - combined_data;
 	var4 = (((var4 * 2147483648) - var2) * 3125) / var1;
-	var1 = (((int64_t)dev->data.cal.dig_P9) * (var4 / 8192) * (var4 / 8192)) / 33554432;
-	var2 = (((int64_t)dev->data.cal.dig_P8) * var4) / 524288;
-	var4 = ((var4 + var1 + var2) / 256) + (((int64_t)dev->data.cal.dig_P7) * 16);
+	var1 = (((int64_t)data->cal.dig_P9) * (var4 / 8192) * (var4 / 8192)) / 33554432;
+	var2 = (((int64_t)data->cal.dig_P8) * var4) / 524288;
+	var4 = ((var4 + var1 + var2) / 256) + (((int64_t)data->cal.dig_P7) * 16);
 
 	*press_Pa = var4 / 256.0;
 	return 0;
 }
 
-static int bme280_activate_filter(tmi_pressure_t *dev, bme280_scale_filter_t scale_of_choice)
+static int bme280_activate_filter(const struct device *dev, bme280_scale_filter_t scale_of_choice)
 {
-
+	tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
 	if (scale_of_choice >= BME280_FILTER_OS_MAX && scale_of_choice < 0) {
 		printk("Invalid scale range.");
 		return -ERANGE;
@@ -341,11 +349,11 @@ static int bme280_activate_filter(tmi_pressure_t *dev, bme280_scale_filter_t sca
 		return ret;
 	}
 
-	dev->config.filter = 2;
+	cfg->filter = 2;
 	return 0;
 }
 
-static int bme280_init_all_default(tmi_pressure_t *dev)
+static int bme280_init_all_default(const struct device *dev)
 {
 	int ret = bme280_readCoefficients(dev);
 	if (ret != 0) {

@@ -33,12 +33,14 @@ LOG_MODULE_REGISTER(xgzp6897d);
 // device, address, where you want to put it, lenght
 static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(dev->config->bus, dev->config->addr, &reg, 1, val, len);
+	const tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	return i2c_write_read(cfg->bus, cfg->addr, &reg, 1, val, len);
 }
 
 static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 {
-	return i2c_reg_write_byte(dev->config->bus, dev->config->addr, reg, val);
+	const tmi_pressure_config_t *cfg = (const tmi_pressure_config_t *)dev->config;
+	return i2c_reg_write_byte(cfg->bus, cfg->addr, reg, val);
 }
 
 static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
