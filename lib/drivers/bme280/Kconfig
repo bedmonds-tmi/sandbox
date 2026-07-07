@@ -1,0 +1,8 @@
+config CUSTOM_BME280
+	bool "Enable BME280 IMU"
+	default n
+	select I2C
+	select FPU
+	select TMI_API_PRESSURE
+  help
+    BME280 enable

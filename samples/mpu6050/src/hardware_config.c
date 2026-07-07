@@ -1,4 +1,5 @@
 #include <tmi/api/imu.h>
+#include <zephyr/logging/log.h>
 
 extern const tmi_imu_api_t mpu6050_api;
 #define IMU0_API mpu6050_api
