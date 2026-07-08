@@ -1,8 +1,14 @@
 #include <zephyr/kernel.h>
 #include <tmi/api/pressure.h>
 #include <zephyr/logging/log.h>
+<<<<<<< HEAD
 #include <stdio.h>
-LOG_MODULE_REGISTER(apps);
+	== == ==
+	=
+#include <zephyr/fs/fs.h>
+#include <stdio.h>
+#include "hardware_config.c"
+		>>>>>>> 745bcf5 (drivers: xgzp6897d: add dualport pressure sensor) LOG_MODULE_REGISTER(apps);
 
 #define MAX_SAMPLES        200
 #define SAMPLE_INTERVAL_US 22500
