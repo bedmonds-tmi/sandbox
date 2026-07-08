@@ -3,8 +3,7 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/logging/log.h>
 #include <stdint.h>
-#include "mpu6050_defs.h"
-#include <tmi/api/imu.h>
+#include "mpu6050.h"
 
 LOG_MODULE_REGISTER(mpu6050);
 
@@ -56,12 +55,14 @@ LOG_MODULE_REGISTER(mpu6050);
 
 static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
-	return i2c_write_read(dev->config.bus, dev->config.addr, &reg, 1, val, len);
+	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
+	return i2c_write_read_dt(&cfg->i2c, &reg, 1, val, len);
 }
 
 static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 {
-	return i2c_reg_write_byte(dev->config.bus, dev->config.addr, reg, val);
+	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
+	return i2c_reg_write_byte_dt(&cfg->i2c, reg, val);
 }
 
 static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
@@ -97,7 +98,7 @@ static int mpu6050_check_whoami(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
 
-	const tmi_imu_config_t *cfg = (const tmi_imu_config_t *)dev->config;
+	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
 
 	uint8_t x;
 	int ret = read_reg(dev, MPU6050_REG_WHOAMI, &x, sizeof(x));
@@ -107,8 +108,8 @@ static int mpu6050_check_whoami(const struct device *dev)
 	}
 
 	/* WHOAMI value will be equal to the address. */
-	if (x != cfg->addr) {
-		LOG_ERR("WHOAMI mismatch. Got 0x%02X, expected 0x%02X", x, cfg->addr);
+	if (x != cfg->i2c.addr) {
+		LOG_ERR("WHOAMI mismatch. Got 0x%02X, expected 0x%02X", x, cfg->i2c.addr);
 		return -ERANGE;
 	}
 
@@ -157,7 +158,7 @@ static int mpu6050_get_accel(const struct device *dev, tmi_imu_vec3_t *raw)
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(raw);
 
-	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	uint8_t tmp[6];
 	int ret = read_reg(dev, MPU6050_REG_ACCEL_XOUTH, tmp, sizeof(tmp));
@@ -180,6 +181,27 @@ static int mpu6050_get_accel(const struct device *dev, tmi_imu_vec3_t *raw)
 }
 
 /**
+ * @brief Get the filtered accelerometer sample.
+ *
+ * @param[in] dev MPU6050 device instance. Must not be NULL.
+ * @param[out] iir Destination for the filtered accelerometer sample. Must not be NULL.
+ *
+ * @retval 0 Accelerometer sample was read successfully.
+ * @retval -EINVAL If @p dev or @p iir is NULL.
+ */
+int mpu6050_get_accel_iir(const struct device *dev, tmi_imu_vec3_t *iir)
+{
+	CHECK_NULL_PTR(dev);
+	CHECK_NULL_PTR(iir);
+
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
+
+	*iir = data->accel_iir;
+
+	return 0;
+}
+
+/**
  * @brief Read the gyroscope sample.
  *
  * @param[in] dev MPU6050 device instance. Must not be NULL.
@@ -196,7 +218,7 @@ static int mpu6050_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
 	CHECK_NULL_PTR(dev);
 	CHECK_NULL_PTR(raw);
 
-	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	uint8_t tmp[6];
 	read_reg(dev, MPU6050_REG_GYRO_XOUTH, tmp, sizeof(tmp));
@@ -211,6 +233,27 @@ static int mpu6050_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
 	data->gyro_iir.x = iir_update(data->gyro_iir.x, raw->x);
 	data->gyro_iir.y = iir_update(data->gyro_iir.y, raw->y);
 	data->gyro_iir.z = iir_update(data->gyro_iir.z, raw->z);
+
+	return 0;
+}
+
+/**
+ * @brief Get the filtered gyroscope sample.
+ *
+ * @param[in] dev MPU6050 device instance. Must not be NULL.
+ * @param[out] iir Destination for the filtered gyroscope sample. Must not be NULL.
+ *
+ * @retval 0 Gyroscope sample was read successfully.
+ * @retval -EINVAL If @p dev or @p iir is NULL.
+ */
+static int mpu6050_get_gyro_iir(const struct device *dev, tmi_imu_vec3_t *iir)
+{
+	CHECK_NULL_PTR(dev);
+	CHECK_NULL_PTR(iir);
+
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
+
+	*iir = data->gyro_iir;
 
 	return 0;
 }
@@ -253,7 +296,7 @@ static int mpu6050_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 {
 	CHECK_NULL_PTR(dev);
 
-	tmi_imu_config_t *cfg = (tmi_imu_config_t *)dev->config;
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	mpu6050_gyro_fs_t gyro_fs = mpu6050_dps_to_fs_sel(dps);
 
@@ -268,7 +311,7 @@ static int mpu6050_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 		return ret;
 	}
 
-	cfg->gyro_fs_dps = dps;
+	data->config.gyro_fs_dps = dps;
 
 	return 0;
 }
@@ -312,7 +355,7 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 {
 	CHECK_NULL_PTR(dev);
 
-	tmi_imu_config_t *cfg = (tmi_imu_config_t *)dev->config;
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	mpu6050_accel_fs_t accel_fs = mpu6050_mG_to_fs_sel(mG);
 
@@ -322,7 +365,7 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 		return ret;
 	}
 
-	cfg->accel_fs_mG = mG;
+	data->config.accel_fs_mG = mG;
 
 	return 0;
 }
@@ -373,22 +416,18 @@ static int mpu6050_init(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
 
-	const tmi_imu_config_t *cfg = (const tmi_imu_config_t *)dev->config;
-	tmi_imu_data_t *data = (tmi_imu_data_t *)dev->data;
+	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	if (dev == NULL) {
 		LOG_ERR("Null pointer to device.");
 		return -EINVAL;
 	}
 
-	if (cfg->bus == NULL) {
-		LOG_ERR("Null pointer to i2c bus.");
-		return -EINVAL;
-	}
-
-	if (cfg->addr != MPU6050_I2C_ADDR0 && cfg->addr != MPU6050_I2C_ADDR1) {
-		LOG_ERR("Invalid I2C address: 0x%02X", cfg->addr);
-		return -EINVAL;
+	bool ready = i2c_is_ready_dt(&cfg->i2c);
+	if (!ready) {
+		LOG_ERR("I2C bus is not ready.");
+		return -EFAULT;
 	}
 
 	int ret = mpu6050_check_whoami(dev);
@@ -436,11 +475,32 @@ static int mpu6050_init(const struct device *dev)
 	return 0;
 }
 
-const tmi_imu_api_t mpu6050_api = {
+static const tmi_imu_api_t mpu6050_api = {
 	.init = mpu6050_init,
 	.get_accel = mpu6050_get_accel,
+	.get_accel_iir = mpu6050_get_accel_iir,
 	.get_gyro = mpu6050_get_gyro,
+	.get_gyro_iir = mpu6050_get_gyro_iir,
 	.set_accel_fs_mG = mpu6050_set_accel_fs_mG,
 	.set_gyro_fs_dps = mpu6050_set_gyro_fs_dps,
 	.get_temp_mC = mpu6050_get_temp_mC,
 };
+
+#define DT_DRV_COMPAT tmi_mpu6050
+
+#define MPU6050_DEFINE(inst)									\
+	static mpu6050_data_t mpu6050_data_##inst;						\
+												\
+	static const mpu6050_config_t mpu6050_config_##inst = {				\
+		.i2c = I2C_DT_SPEC_INST_GET(inst),						\
+		.alpha_div = DT_INST_PROP(inst, alpha_div),					\
+		.accel_fs_mG = DT_INST_PROP(inst, accel_fs_mg),					\
+		.gyro_fs_dps = DT_INST_PROP(inst, gyro_fs_dps),						\
+	};											\
+												\
+	DEVICE_DT_INST_DEFINE(inst, mpu6050_init, NULL,					\
+			      &mpu6050_data_##inst, &mpu6050_config_##inst,			\
+			      POST_KERNEL, CONFIG_TMI_DRIVER_MPU6050_INIT_PRIORITY,		\
+			      &mpu6050_api);
+
+DT_INST_FOREACH_STATUS_OKAY(MPU6050_DEFINE)

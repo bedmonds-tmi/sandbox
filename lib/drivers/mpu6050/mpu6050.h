@@ -4,6 +4,9 @@
  * @details
  */
 
+#include <zephyr/drivers/i2c.h>
+#include <tmi/api/imu.h>
+
 #define MPU6050_I2C_ADDR0 0x68
 #define MPU6050_I2C_ADDR1 0x69
 
@@ -28,3 +31,16 @@ typedef enum {
 	MPU6050_GYRO_CONF_FS_2000_DPS = 3,
 	MPU6050_GYRO_CONF_FS_MAX = 4,
 } mpu6050_gyro_fs_t;
+
+typedef struct {
+	struct i2c_dt_spec i2c;
+	uint8_t alpha_div;    /** IIR filter alpha divisor. */
+	uint16_t accel_fs_mG;
+	uint16_t gyro_fs_dps;
+} mpu6050_config_t;
+
+typedef struct {
+	mpu6050_config_t config; /** Device configuration. */
+	tmi_imu_vec3_t accel_iir; /** Accelerometer raw IIR filtered data. */
+	tmi_imu_vec3_t gyro_iir;  /** Gyroscope raw IIR filtered data. */
+} mpu6050_data_t;

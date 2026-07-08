@@ -4,5 +4,12 @@ config TMI_DRIVER_MPU6050
 	select I2C
 	select FPU
 	select TMI_API_IMU
-  help
-    MPU6050 enable
+	help
+	  MPU6050 enable
+
+config TMI_DRIVER_MPU6050_INIT_PRIORITY
+	int "MPU6050 init priority"
+	default 90
+	depends on TMI_DRIVER_MPU6050
+	help
+	  MPU6050 initialization priority.

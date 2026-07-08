@@ -1,0 +1,35 @@
+# Copyright (c) 2019 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+description: MPU-6000 motion tracking device
+
+# MPU-6000 is SPI or I2C.  MPU-6050 is I2C-only.  Driver does not
+# support SPI so stick with I2C variant.
+compatible: "tmi,mpu6050"
+
+include: [i2c-device.yaml]
+
+properties:
+
+  accel-fs-mg:
+    type: int
+    default: 2000
+    description: |
+      Accelerometer full-scale range in milli-Gs.
+      An X value represents a range of +/- X g.
+      The power-on reset state of the sensor matches the default value of 2000.
+
+  gyro-fs-dps:
+    type: int
+    default: 250
+    description: |
+      Gyroscope full-scale range.
+      An X value represents a range of +/- X deg/s.
+      The power-on reset state of the sensor matches the default value of 250.
+
+  alpha-div:
+    type: int
+    default: 4
+    description: |
+      IIR filter alpha divisor.
+      The power-on reset state of the sensor matches the default value of 4.

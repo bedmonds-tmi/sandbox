@@ -3,3 +3,20 @@
 		i2c0 = &i2c0;
 	};
 };
+
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	imu0: mpu6050@68 {
+		compatible = "tmi,mpu6050";
+		reg = <0x68>;
+		label = "MPU6050";
+		status = "okay";
+		gyro-fs-dps = <250>;
+		accel-fs-mg = <2000>;
+		alpha-div = <8>;
+	};
+};
