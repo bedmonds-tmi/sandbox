@@ -1,0 +1,33 @@
+
+description: bme pressure tracking device
+
+compatible: "tmi,bme280"
+
+include: [i2c-device.yaml]
+
+properties:
+
+  temp:
+    type: int
+    default: 2
+    description: |
+      temperature scale.
+
+  hum:
+    type: int
+    default: 2
+    description: |
+      humitidy full-scale range.
+  
+
+  press:
+    type: int
+    default: 2
+    description: |
+      Pressure full scale range.
+
+  filter:
+    type: int
+    default: 2
+    description: |
+      Filter full scale range. 

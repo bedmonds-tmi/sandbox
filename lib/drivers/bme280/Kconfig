@@ -1,0 +1,16 @@
+config TMI_DRIVER_BME280
+	bool "Enable BME280 IMU"
+	default n
+	select I2C
+	select FPU
+	select TMI_API_PRESSURE
+  help
+    BME280 enable
+
+
+config TMI_DRIVER_BME280_INIT_PRIORITY
+	int "BME280	init priority"
+	default 90
+	depends on TMI_DRIVER_BME280
+	help
+	  BME280 initialization priority.

@@ -1,15 +1,10 @@
-<<<<<<< HEAD
 config TMI_DRIVER_XGZP6897D	
-=======
-config CUSTOM_XGZP6897D	
->>>>>>> 745bcf5 (drivers: xgzp6897d: add dualport pressure sensor)
 	bool "Enable xgzp6897d pressure sense"
 	default n
 	select I2C
 	select FPU
 	select TMI_API_PRESSURE
   help
-<<<<<<< HEAD
     Enables the xgzp6897d pressure sense I2C, FPU and PRESSURE_API
 
 config TMI_DRIVER_XGZP6897D_INIT_PRIORITY
@@ -18,6 +13,3 @@ config TMI_DRIVER_XGZP6897D_INIT_PRIORITY
 	depends on TMI_DRIVER_XGZP6897D
 	help
 	  XGZP6897D	initialization priority.
-=======
-    xgzp6897d enable
->>>>>>> 745bcf5 (drivers: xgzp6897d: add dualport pressure sensor)

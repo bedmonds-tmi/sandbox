@@ -1,0 +1,23 @@
+/ {
+	aliases {
+		i2c0 = &i2c0;
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	p0: bme280@76 {
+		compatible = "tmi,bme280";
+		reg = <0x76>;
+		status = "okay";
+		label = " XGZP6897D";
+		press = <2>;
+		hum = <2>;
+		temp = <2>;
+		filter = <2>;
+	};
+};

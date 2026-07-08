@@ -9,7 +9,7 @@ typedef struct {
 	int (*get_whoami)(const struct device *dev);
 	int (*get_humidity)(const struct device *dev, float *RH);
 	int (*get_pressure)(const struct device *dev, float *Pascals);
-	int (*get_tempurature)(const struct device *dev, double *degC);
+	int (*get_tempurature)(const struct device *dev, float *degC);
 } tmi_pressure_api_t;
 
 static inline int tmi_pressure_init(const struct device *dev)
@@ -34,7 +34,7 @@ static inline int tmi_pressure_get_pressure(const struct device *dev, float *pa)
 	return api->get_pressure(dev, pa);
 }
 
-static inline int tmi_pressure_get_temp_mC(const struct device *dev, double *mC)
+static inline int tmi_pressure_get_temp_mC(const struct device *dev, float *mC)
 {
 	const tmi_pressure_api_t *api = (const tmi_pressure_api_t *)dev->api;
 	return api->get_tempurature(dev, mC);

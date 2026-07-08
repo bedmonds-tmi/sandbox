@@ -1,2 +1,3 @@
 rsource "mpu6050/Kconfig"
 rsource "xgzp6897d/Kconfig"
+rsource "bme280/Kconfig"
