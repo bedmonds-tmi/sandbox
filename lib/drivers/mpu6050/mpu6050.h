@@ -34,13 +34,13 @@ typedef enum {
 
 typedef struct {
 	struct i2c_dt_spec i2c;
-	uint8_t alpha_div;    /** IIR filter alpha divisor. */
+	uint8_t alpha_div; /** IIR filter alpha divisor. */
 	uint16_t accel_fs_mG;
 	uint16_t gyro_fs_dps;
 } mpu6050_config_t;
 
 typedef struct {
-	mpu6050_config_t config; /** Device configuration. */
+	mpu6050_config_t config;  /** Device configuration. */
 	tmi_imu_vec3_t accel_iir; /** Accelerometer raw IIR filtered data. */
 	tmi_imu_vec3_t gyro_iir;  /** Gyroscope raw IIR filtered data. */
 } mpu6050_data_t;
