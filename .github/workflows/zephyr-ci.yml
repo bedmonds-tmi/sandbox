@@ -5,11 +5,13 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+
 permissions:
   contents: read
 
 concurrency:
-  group: code-quality-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -29,11 +31,19 @@ jobs:
       - name: Check C and C++ formatting
         shell: bash
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="HEAD~1"
+            head="HEAD"
+          fi
+
           files=$(git diff \
             --name-only \
             --diff-filter=ACMR \
-            "${{ github.event.pull_request.base.sha }}" \
-            "${{ github.event.pull_request.head.sha }}" \
+            "$base" \
+            "$head" \
             -- '*.c' '*.h' '*.cpp' '*.hpp')
 
           if [ -z "$files" ]; then
@@ -70,11 +80,17 @@ jobs:
           fetch-depth: 0
 
       - name: Check whitespace
+        shell: bash
         run: |
-          git diff \
-            --check \
-            "${{ github.event.pull_request.base.sha }}" \
-            "${{ github.event.pull_request.head.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="HEAD~1"
+            head="HEAD"
+          fi
+
+          git diff --check "$base" "$head"
 
   commit-messages:
     name: Commit Messages
@@ -89,8 +105,13 @@ jobs:
       - name: Validate commit messages
         shell: bash
         run: |
-          base="${{ github.event.pull_request.base.sha }}"
-          head="${{ github.event.pull_request.head.sha }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="HEAD~1"
+            head="HEAD"
+          fi
 
           failed=0
 
@@ -102,17 +123,15 @@ jobs:
               continue
             fi
 
-            # Maximum subject length.
+            # Limit the first line to 72 characters.
             if [ "${#subject}" -gt 72 ]; then
               echo "::error::Commit subject exceeds 72 characters: $subject"
               failed=1
             fi
 
-            # Require: lowercase area: lowercase description
-            # Examples:
-            # drivers: add bme280 support
-            # bluetooth: handle send failure
-            # ci: add formatting checks
+            # Require:
+            # area: lowercase description
+            # area/subsystem: lowercase description
             if ! [[ "$subject" =~ ^[a-z0-9][a-z0-9_-]*(/[a-z0-9_-]+)?:\ [a-z0-9] ]]; then
               echo "::error::Invalid commit format: $subject"
               echo "Expected: area: lowercase imperative description"
