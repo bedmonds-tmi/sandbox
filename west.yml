@@ -12,7 +12,7 @@ manifest:
     - name: zephyr
       remote: zephyr_sdk
       repo-path: zephyr
-      revision: v4.4.0
+      revision: v4.4.1
       import:
         file: west.yml
         path-prefix: deps

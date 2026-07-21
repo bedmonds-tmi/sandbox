@@ -17,6 +17,5 @@
 		status = "okay";
 		gyro-fs-dps = <250>;
 		accel-fs-mg = <2000>;
-		alpha-div = <8>;
 	};
 };
