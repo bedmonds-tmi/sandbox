@@ -1,1 +1,0 @@
-add_subdirectory_ifdef(CONFIG_TMI_API_IMU imu)
