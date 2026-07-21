@@ -3,7 +3,7 @@ config TMI_DRIVER_MPU6050
 	default n
 	select I2C
 	select FPU
-	select TMI_API_IMU
+	select SENSOR
 	help
 	  MPU6050 enable
 

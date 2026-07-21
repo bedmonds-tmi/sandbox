@@ -83,7 +83,7 @@ static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8
 
 /**
  * @brief Verify communication with the MPU6050.
- * 
+ *
  * @details Reads the WHOAMI register and checks that it matches the configured
  * I2C address.
  *
@@ -117,30 +117,6 @@ static int mpu6050_check_whoami(const struct device *dev)
 }
 
 /**
- * @brief Update a first-order IIR filtered value.
- * 
- * @details
- * Uses an alpha of 1/8:
- *
- * new_val = raw * alpha + filtered * (1 - alpha)
- *         = filtered + (raw - filtered) * alpha
- *
- * @param[in] filtered Previous filtered value.
- * @param[in] raw New raw sample value.
- *
- * @return Updated filtered value.
- */
-static int16_t iir_update(int16_t filtered, int16_t raw)
-{
-	int32_t diff = (int32_t)raw - filtered;
-
-	// Shifting by 3 is the same as dividing diff by 8 (i.e. alpha of 1/8)
-	int32_t new = filtered + (diff >> 3);
-
-	return (int16_t)new;
-}
-
-/**
  * @brief Read the accelerometer sample.
  *
  * @param[in] dev MPU6050 device instance. Must not be NULL.
@@ -153,10 +129,9 @@ static int16_t iir_update(int16_t filtered, int16_t raw)
  * @retval 0 Accelerometer sample was read successfully.
  * @retval -EINVAL If @p dev or @p raw is NULL.
  */
-static int mpu6050_get_accel(const struct device *dev, tmi_imu_vec3_t *raw)
+static int mpu6050_get_accel(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
-	CHECK_NULL_PTR(raw);
 
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
@@ -167,36 +142,18 @@ static int mpu6050_get_accel(const struct device *dev, tmi_imu_vec3_t *raw)
 	}
 
 	// Big endian (high byte first, low byte second)
-	raw->x = (int16_t)(((uint16_t)tmp[0] << 8) | tmp[1]);
-	raw->y = (int16_t)(((uint16_t)tmp[2] << 8) | tmp[3]);
+	int16_t x = sys_get_be16(&tmp[0]);
+	int16_t y = sys_get_be16(&tmp[2]);
+	int16_t z = sys_get_be16(&tmp[4]);
 
-	// Can also use zephyr's built-in function
-	raw->z = sys_get_be16(&tmp[4]);
+	data->accel[0].val1 = x % 1000000;
+	data->accel[0].val2 = x / 1000000;
 
-	data->accel_iir.x = iir_update(data->accel_iir.x, raw->x);
-	data->accel_iir.y = iir_update(data->accel_iir.y, raw->y);
-	data->accel_iir.z = iir_update(data->accel_iir.z, raw->z);
+	data->accel[1].val1 = y % 1000;
+	data->accel[1].val2 = y / 1000;
 
-	return 0;
-}
-
-/**
- * @brief Get the filtered accelerometer sample.
- *
- * @param[in] dev MPU6050 device instance. Must not be NULL.
- * @param[out] iir Destination for the filtered accelerometer sample. Must not be NULL.
- *
- * @retval 0 Accelerometer sample was read successfully.
- * @retval -EINVAL If @p dev or @p iir is NULL.
- */
-int mpu6050_get_accel_iir(const struct device *dev, tmi_imu_vec3_t *iir)
-{
-	CHECK_NULL_PTR(dev);
-	CHECK_NULL_PTR(iir);
-
-	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
-
-	*iir = data->accel_iir;
+	data->accel[2].val1 = z % 1000;
+	data->accel[2].val2 = z / 1000;
 
 	return 0;
 }
@@ -213,47 +170,30 @@ int mpu6050_get_accel_iir(const struct device *dev, tmi_imu_vec3_t *iir)
  * @retval 0 Gyroscope sample was read successfully.
  * @retval -EINVAL If @p dev or @p raw is NULL.
  */
-static int mpu6050_get_gyro(const struct device *dev, tmi_imu_vec3_t *raw)
+static int mpu6050_get_gyro(const struct device *dev)
 {
 	CHECK_NULL_PTR(dev);
-	CHECK_NULL_PTR(raw);
 
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	uint8_t tmp[6];
 	read_reg(dev, MPU6050_REG_GYRO_XOUTH, tmp, sizeof(tmp));
 
+	int16_t x, y, z;
+
 	// Big endian (high byte first, low byte second)
-	raw->x = (int16_t)(((uint16_t)tmp[0] << 8) | tmp[1]);
-	raw->y = (int16_t)(((uint16_t)tmp[2] << 8) | tmp[3]);
+	x = sys_get_be16(&tmp[0]);
+	y = sys_get_be16(&tmp[2]);
+	z = sys_get_be16(&tmp[4]);
 
-	// Can also use zephyr's built-in function
-	raw->z = sys_get_be16(&tmp[4]);
+	data->gyro[0].val1 = x % 1000000;
+	data->gyro[0].val2 = x / 1000000;
 
-	data->gyro_iir.x = iir_update(data->gyro_iir.x, raw->x);
-	data->gyro_iir.y = iir_update(data->gyro_iir.y, raw->y);
-	data->gyro_iir.z = iir_update(data->gyro_iir.z, raw->z);
+	data->gyro[1].val1 = x % 1000000;
+	data->gyro[1].val2 = x / 1000000;
 
-	return 0;
-}
-
-/**
- * @brief Get the filtered gyroscope sample.
- *
- * @param[in] dev MPU6050 device instance. Must not be NULL.
- * @param[out] iir Destination for the filtered gyroscope sample. Must not be NULL.
- *
- * @retval 0 Gyroscope sample was read successfully.
- * @retval -EINVAL If @p dev or @p iir is NULL.
- */
-static int mpu6050_get_gyro_iir(const struct device *dev, tmi_imu_vec3_t *iir)
-{
-	CHECK_NULL_PTR(dev);
-	CHECK_NULL_PTR(iir);
-
-	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
-
-	*iir = data->gyro_iir;
+	data->gyro[2].val1 = x % 1000000;
+	data->gyro[2].val2 = x / 1000000;
 
 	return 0;
 }
@@ -400,6 +340,59 @@ int mpu6050_get_temp_mC(const struct device *dev, int16_t *tmp_mC)
 	return 0;
 }
 
+static int mpu6050_sample_fetch(const struct device *dev, enum sensor_channel chan)
+{
+	CHECK_NULL_PTR(dev);
+
+	if (chan != SENSOR_CHAN_ALL) {
+		return -ENOTSUP;
+	}
+
+	int ret = mpu6050_get_accel(dev);
+	if (ret != 0) {
+		return ret;
+	}
+
+	ret = mpu6050_get_gyro(dev);
+	if (ret != 0) {
+		return ret;
+	}
+
+	return 0;
+}
+
+static int mpu6050_channel_get(const struct device *dev, enum sensor_channel chan,
+			       struct sensor_value *val)
+{
+	CHECK_NULL_PTR(dev);
+	CHECK_NULL_PTR(val);
+
+	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_XYZ:
+		val = data->accel;
+		break;
+
+	case SENSOR_CHAN_GYRO_XYZ:
+		val = data->gyro;
+		break;
+
+	case SENSOR_CHAN_ALL:
+		val[0] = data->accel[0];
+		val[1] = data->accel[1];
+		val[2] = data->accel[2];
+		val[3] = data->gyro[0];
+		val[4] = data->gyro[1];
+		val[5] = data->gyro[2];
+		break;
+
+	default:
+		return -ENOTSUP;
+		break;
+	}
+}
+
 /**
  * @brief Initialize the MPU6050 driver.
  *
@@ -454,53 +447,29 @@ static int mpu6050_init(const struct device *dev)
 		return ret;
 	}
 
-	// Initialize filters
-	tmi_imu_vec3_t accel;
-	tmi_imu_vec3_t gyro;
-
-	ret = mpu6050_get_accel(dev, &accel);
-	if (ret != 0) {
-		return ret;
-	}
-
-	ret = mpu6050_get_gyro(dev, &gyro);
-	if (ret != 0) {
-		return ret;
-	}
-
-	data->accel_iir = accel;
-	data->gyro_iir = gyro;
-
 	LOG_INF("Initialized");
 	return 0;
 }
 
-static const tmi_imu_api_t mpu6050_api = {
-	.init = mpu6050_init,
-	.get_accel = mpu6050_get_accel,
-	.get_accel_iir = mpu6050_get_accel_iir,
-	.get_gyro = mpu6050_get_gyro,
-	.get_gyro_iir = mpu6050_get_gyro_iir,
-	.set_accel_fs_mG = mpu6050_set_accel_fs_mG,
-	.set_gyro_fs_dps = mpu6050_set_gyro_fs_dps,
-	.get_temp_mC = mpu6050_get_temp_mC,
+static const struct sensor_driver_api mpu6050_api = {
+	.sample_fetch = mpu6050_sample_fetch,
+	.channel_get = mpu6050_channel_get,
 };
 
 #define DT_DRV_COMPAT tmi_mpu6050
 
-#define MPU6050_DEFINE(inst)									\
-	static mpu6050_data_t mpu6050_data_##inst;						\
-												\
-	static const mpu6050_config_t mpu6050_config_##inst = {				\
-		.i2c = I2C_DT_SPEC_INST_GET(inst),						\
-		.alpha_div = DT_INST_PROP(inst, alpha_div),					\
-		.accel_fs_mG = DT_INST_PROP(inst, accel_fs_mg),					\
-		.gyro_fs_dps = DT_INST_PROP(inst, gyro_fs_dps),						\
-	};											\
-												\
-	DEVICE_DT_INST_DEFINE(inst, mpu6050_init, NULL,					\
-			      &mpu6050_data_##inst, &mpu6050_config_##inst,			\
-			      POST_KERNEL, CONFIG_TMI_DRIVER_MPU6050_INIT_PRIORITY,		\
-			      &mpu6050_api);
+#define MPU6050_DEFINE(inst)                                                                       \
+	static mpu6050_data_t mpu6050_data_##inst;                                                 \
+                                                                                                   \
+	static const mpu6050_config_t mpu6050_config_##inst = {                                    \
+		.i2c = I2C_DT_SPEC_INST_GET(inst),                                                 \
+		.alpha_div = DT_INST_PROP(inst, alpha_div),                                        \
+		.accel_fs_mG = DT_INST_PROP(inst, accel_fs_mg),                                    \
+		.gyro_fs_dps = DT_INST_PROP(inst, gyro_fs_dps),                                    \
+	};                                                                                         \
+                                                                                                   \
+	DEVICE_DT_INST_DEFINE(inst, mpu6050_init, NULL, &mpu6050_data_##inst,                      \
+			      &mpu6050_config_##inst, POST_KERNEL,                                 \
+			      CONFIG_TMI_DRIVER_MPU6050_INIT_PRIORITY, &mpu6050_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MPU6050_DEFINE)
