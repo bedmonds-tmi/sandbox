@@ -1,0 +1,5 @@
+config TMI_API_PRESSURE
+	bool "Enable PRESSURE API"
+	default n
+  help
+    TMI Pressure API enable
