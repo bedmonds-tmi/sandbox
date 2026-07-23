@@ -1,0 +1,2 @@
+rsource "imu/Kconfig"
+rsource "light/Kconfig"
