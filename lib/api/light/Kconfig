@@ -1,0 +1,5 @@
+config TMI_API_LIGHT
+	bool "Enable LIGHT API"
+	default n
+  help
+    TMI Light API enable
