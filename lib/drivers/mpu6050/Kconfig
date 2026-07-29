@@ -13,3 +13,45 @@ config TMI_DRIVER_MPU6050_INIT_PRIORITY
 	depends on TMI_DRIVER_MPU6050
 	help
 	  MPU6050 initialization priority.
+
+if TMI_DRIVER_MPU6050
+
+choice TMI_DRIVER_MPU6050_TRIGGER_MODE
+	prompt "Trigger mode"
+	default TMI_DRIVER_MPU6050_TRIGGER_NONE
+	help
+	  Specify the type of triggering used by the driver.
+
+config TMI_DRIVER_MPU6050_TRIGGER_NONE
+	bool "No trigger"
+
+config TMI_DRIVER_MPU6050_TRIGGER_GLOBAL_THREAD
+	bool "Use global thread"
+	depends on GPIO
+	select TMI_DRIVER_MPU6050_TRIGGER
+
+config TMI_DRIVER_MPU6050_TRIGGER_OWN_THREAD
+	bool "Use own thread"
+	depends on GPIO
+	select TMI_DRIVER_MPU6050_TRIGGER
+
+endchoice
+
+config TMI_DRIVER_MPU6050_TRIGGER
+	bool
+
+config TMI_DRIVER_MPU6050_THREAD_PRIORITY
+	int "Thread priority"
+	depends on TMI_DRIVER_MPU6050_TRIGGER_OWN_THREAD
+	default 10
+	help
+	  Priority of thread used by the driver to handle interrupts.
+
+config TMI_DRIVER_MPU6050_THREAD_STACK_SIZE
+	int "Thread stack size"
+	depends on TMI_DRIVER_MPU6050_TRIGGER_OWN_THREAD
+	default 1024
+	help
+	  Stack size of thread used by the driver to handle interrupts.
+
+endif # TMI_DRIVER_MPU6050
