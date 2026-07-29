@@ -1,1 +1,2 @@
 add_subdirectory_ifdef(CONFIG_TMI_DRIVER_MPU6050 mpu6050)
+add_subdirectory_ifdef(CONFIG_TMI_DRIVER_XGZP6897D xgzp6897d)

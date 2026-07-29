@@ -1,0 +1,15 @@
+config TMI_DRIVER_TCS3400
+	bool "Enable tcs3400 pressure sense"
+	default n
+	select I2C
+	select FPU
+	select SENSOR
+	help
+		Enables the xgzp6897d pressure sense I2C, FPU and PRESSURE_API
+
+config TMI_DRIVER_TCS3400_INIT_PRIORITY
+	int "TCS3400	init priority"
+	default 90
+	depends on TMI_DRIVER_TCS3400
+	help
+		TCS3400 initialization priority.
