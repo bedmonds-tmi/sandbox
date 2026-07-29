@@ -1,3 +1,5 @@
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
 / {
 	aliases {
 		i2c0 = &i2c0;
@@ -17,5 +19,9 @@
 		status = "okay";
 		gyro-fs-dps = <250>;
 		accel-fs-mg = <2000>;
+		/* MPU6050 INT pin wired to P0.02. Demonstrates the
+		 * interrupt-driven data-ready trigger; boards without an
+		 * int-gpios property fall back to polling in the app. */
+		int-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
 	};
 };

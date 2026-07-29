@@ -1,3 +1,15 @@
+/**
+ * @file mpu6050.c
+ * @brief MPU6050 sensor driver: initialization, sample fetch/conversion, and
+ * the Zephyr sensor API implementation.
+ *
+ * @details Implements the driver's @ref sensor_driver_api: device init and
+ * WHOAMI verification, reading and converting raw accelerometer/gyroscope/
+ * temperature samples, and getting/setting the full-scale range attribute.
+ * Full-scale range selection and unit conversion are delegated to
+ * mpu6050_utils.c; register access is delegated to mpu6050_bus.c.
+ */
+
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/drivers/i2c.h>
@@ -6,80 +18,6 @@
 #include "mpu6050.h"
 
 LOG_MODULE_REGISTER(mpu6050);
-
-#define MPU6050_REG_ACCEL_XOUTH  0x3B
-#define MPU6050_REG_TEMP_OUTH    0x41
-#define MPU6050_REG_GYRO_XOUTH   0x43
-#define MPU6050_REG_WHOAMI       0x75
-#define MPU6050_REG_USER_CTRL    0x6A
-#define MPU6050_REG_PWR_MGMT_1   0x6B
-#define MPU6050_REG_SELF_TEST_X  0x0D
-#define MPU6050_REG_SELF_TEST_Y  0x0E
-#define MPU6050_REG_SELF_TEST_Z  0x0F
-#define MPU6050_REG_SELF_TEST_A  0x10
-#define MPU6050_REG_SMPLRT_DIV   0x19
-#define MPU6050_REG_CONFIG       0x1A
-#define MPU6050_REG_GYRO_CONFIG  0x1B
-#define MPU6050_REG_ACCEL_CONFIG 0x1C
-#define MPU6050_REG_MOT_THR      0x1F
-#define MPU6050_REG_FIFO_EN      0x23
-
-#define MPU6050_ACCEL_DATA_LEN 6U
-#define MPU6050_TEMP_DATA_LEN  2U
-#define MPU6050_GYRO_DATA_LEN  6U
-
-/**
- * GENMASK(4, 3) is the same as (0x03 << 3), so bits 3 and 4 are set
- * (0b00011000). BIT(5) is the same as (1 << 5), so bit 5 is set
- * (0b00100000).
- */
-#define MPU6050_MASK_ACCEL_CONFIG_AFS_SEL GENMASK(4, 3)
-#define MPU6050_MASK_ACCEL_CONFIG_ZA_ST   BIT(5)
-#define MPU6050_MASK_ACCEL_CONFIG_YA_ST   BIT(6)
-#define MPU6050_MASK_ACCEL_CONFIG_XA_ST   BIT(7)
-
-#define MPU6050_MASK_GYRO_CONFIG_FS_SEL GENMASK(4, 3)
-#define MPU6050_MASK_GYRO_CONFIG_ZG_ST  BIT(5)
-#define MPU6050_MASK_GYRO_CONFIG_YG_ST  BIT(6)
-#define MPU6050_MASK_GYRO_CONFIG_XG_ST  BIT(7)
-
-#define MPU6050_MASK_PWR_MGMT_1_SLEEP BIT(6)
-
-#define CHECK_NULL_PTR(ptr)                                                                        \
-	do {                                                                                       \
-		if (ptr == NULL) {                                                                 \
-			LOG_ERR("%s: null pointer: " #ptr, __func__);                              \
-			return -EINVAL;                                                            \
-		}                                                                                  \
-	} while (0)
-
-static int read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
-{
-	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
-	return i2c_write_read_dt(&cfg->i2c, &reg, 1, val, len);
-}
-
-static int write_reg(const struct device *dev, uint8_t reg, uint8_t val)
-{
-	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
-	return i2c_reg_write_byte_dt(&cfg->i2c, reg, val);
-}
-
-static int write_mask(const struct device *dev, uint8_t reg, uint8_t mask, uint8_t val)
-{
-	uint8_t tmp;
-
-	int ret = read_reg(dev, reg, &tmp, sizeof(tmp));
-	if (ret != 0) {
-		LOG_ERR("Error: %d", ret);
-		return ret;
-	}
-
-	tmp &= ~mask;                 // Clear the target bit
-	tmp |= FIELD_PREP(mask, val); // Set the target bit based on val
-
-	return write_reg(dev, reg, tmp);
-}
 
 /**
  * @brief Verify communication with the MPU6050.
@@ -101,7 +39,7 @@ static int mpu6050_check_whoami(const struct device *dev)
 	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
 
 	uint8_t x;
-	int ret = read_reg(dev, MPU6050_REG_WHOAMI, &x, sizeof(x));
+	int ret = mpu6050_read_reg(dev, MPU6050_REG_WHOAMI, &x, sizeof(x));
 	if (ret != 0) {
 		LOG_ERR("Read reg failed when reading WHOAMI reg: %d", ret);
 		return ret;
@@ -114,45 +52,6 @@ static int mpu6050_check_whoami(const struct device *dev)
 	}
 
 	return 0;
-}
-
-static mpu6050_accel_fs_t mpu6050_mG_to_fs_sel(uint32_t mG);
-static mpu6050_gyro_fs_t mpu6050_dps_to_fs_sel(int32_t dps);
-
-/**
- * @brief Accelerometer sensitivity, in LSB per g, for a given full-scale range.
- */
-static double mpu6050_accel_fs_to_lsb_per_g(mpu6050_accel_fs_t fs)
-{
-	switch (fs) {
-	case MPU6050_ACCEL_CONF_FS_2_G:
-		return 16384.0;
-	case MPU6050_ACCEL_CONF_FS_4_G:
-		return 8192.0;
-	case MPU6050_ACCEL_CONF_FS_8_G:
-		return 4096.0;
-	case MPU6050_ACCEL_CONF_FS_16_G:
-	default:
-		return 2048.0;
-	}
-}
-
-/**
- * @brief Gyroscope sensitivity, in LSB per degree/s, for a given full-scale range.
- */
-static double mpu6050_gyro_fs_to_lsb_per_dps(mpu6050_gyro_fs_t fs)
-{
-	switch (fs) {
-	case MPU6050_GYRO_CONF_FS_250_DPS:
-		return 131.0;
-	case MPU6050_GYRO_CONF_FS_500_DPS:
-		return 65.5;
-	case MPU6050_GYRO_CONF_FS_1000_DPS:
-		return 32.8;
-	case MPU6050_GYRO_CONF_FS_2000_DPS:
-	default:
-		return 16.4;
-	}
 }
 
 /**
@@ -173,7 +72,7 @@ static int mpu6050_get_accel(const struct device *dev)
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	uint8_t tmp[6];
-	int ret = read_reg(dev, MPU6050_REG_ACCEL_XOUTH, tmp, sizeof(tmp));
+	int ret = mpu6050_read_reg(dev, MPU6050_REG_ACCEL_XOUTH, tmp, sizeof(tmp));
 	if (ret != 0) {
 		return ret;
 	}
@@ -183,8 +82,7 @@ static int mpu6050_get_accel(const struct device *dev)
 	int16_t y = sys_get_be16(&tmp[2]);
 	int16_t z = sys_get_be16(&tmp[4]);
 
-	double lsb_per_g =
-		mpu6050_accel_fs_to_lsb_per_g(mpu6050_mG_to_fs_sel(data->config.accel_fs_mG));
+	double lsb_per_g = mpu6050_accel_fs_to_sensitivity(data->accel_fs);
 
 	sensor_value_from_double(&data->accel[0], ((double)x / lsb_per_g) * SENSOR_G / 1000000.0);
 	sensor_value_from_double(&data->accel[1], ((double)y / lsb_per_g) * SENSOR_G / 1000000.0);
@@ -211,7 +109,7 @@ static int mpu6050_get_gyro(const struct device *dev)
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
 	uint8_t tmp[6];
-	int ret = read_reg(dev, MPU6050_REG_GYRO_XOUTH, tmp, sizeof(tmp));
+	int ret = mpu6050_read_reg(dev, MPU6050_REG_GYRO_XOUTH, tmp, sizeof(tmp));
 	if (ret != 0) {
 		return ret;
 	}
@@ -223,8 +121,7 @@ static int mpu6050_get_gyro(const struct device *dev)
 	y = sys_get_be16(&tmp[2]);
 	z = sys_get_be16(&tmp[4]);
 
-	double lsb_per_dps =
-		mpu6050_gyro_fs_to_lsb_per_dps(mpu6050_dps_to_fs_sel(data->config.gyro_fs_dps));
+	double lsb_per_dps = mpu6050_gyro_fs_to_sensitivity(data->gyro_fs);
 
 	sensor_value_from_double(&data->gyro[0],
 				 ((double)x / lsb_per_dps) * SENSOR_PI / 180.0 / 1000000.0);
@@ -234,21 +131,6 @@ static int mpu6050_get_gyro(const struct device *dev)
 				 ((double)z / lsb_per_dps) * SENSOR_PI / 180.0 / 1000000.0);
 
 	return 0;
-}
-
-static mpu6050_gyro_fs_t mpu6050_dps_to_fs_sel(int32_t dps)
-{
-	if (dps < 250) {
-		return MPU6050_GYRO_CONF_FS_250_DPS;
-	} else if (dps < 500) {
-		return MPU6050_GYRO_CONF_FS_500_DPS;
-	} else if (dps < 1000) {
-		return MPU6050_GYRO_CONF_FS_1000_DPS;
-	} else if (dps < 2000) {
-		return MPU6050_GYRO_CONF_FS_2000_DPS;
-	} else {
-		return MPU6050_GYRO_CONF_FS_MAX;
-	}
 }
 
 /**
@@ -276,38 +158,22 @@ static int mpu6050_set_gyro_fs_dps(const struct device *dev, uint32_t dps)
 
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
-	mpu6050_gyro_fs_t gyro_fs = mpu6050_dps_to_fs_sel(dps);
+	mpu6050_gyro_fs_t gyro_fs = mpu6050_dps_to_fs(dps);
 
 	if (gyro_fs >= MPU6050_GYRO_CONF_FS_MAX) {
 		LOG_WRN("MPU6050 can't achieve %d dps, clamping to 2000dps", dps);
 		gyro_fs = MPU6050_GYRO_CONF_FS_2000_DPS;
 	}
 
-	int ret = write_mask(dev, MPU6050_REG_GYRO_CONFIG, MPU6050_MASK_GYRO_CONFIG_FS_SEL,
-			     (uint8_t)gyro_fs);
+	int ret = mpu6050_write_mask(dev, MPU6050_REG_GYRO_CONFIG, MPU6050_MASK_GYRO_CONFIG_FS_SEL,
+				     (uint8_t)gyro_fs);
 	if (ret != 0) {
 		return ret;
 	}
 
-	data->config.gyro_fs_dps = dps;
+	data->gyro_fs = gyro_fs;
 
 	return 0;
-}
-
-static mpu6050_accel_fs_t mpu6050_mG_to_fs_sel(uint32_t mG)
-{
-	if (mG < 2000) {
-		return MPU6050_ACCEL_CONF_FS_2_G;
-	} else if (mG < 4000) {
-		return MPU6050_ACCEL_CONF_FS_4_G;
-	} else if (mG < 8000) {
-		return MPU6050_ACCEL_CONF_FS_8_G;
-	} else if (mG < 16000) {
-		return MPU6050_ACCEL_CONF_FS_16_G;
-	} else {
-		LOG_WRN("MPU6050 can't achieve %d mG, clamping to 16 G", mG);
-		return MPU6050_ACCEL_CONF_FS_16_G;
-	}
 }
 
 /**
@@ -335,15 +201,15 @@ int mpu6050_set_accel_fs_mG(const struct device *dev, uint32_t mG)
 
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
-	mpu6050_accel_fs_t accel_fs = mpu6050_mG_to_fs_sel(mG);
+	mpu6050_accel_fs_t accel_fs = mpu6050_mG_to_fs(mG);
 
-	int ret = write_mask(dev, MPU6050_REG_ACCEL_CONFIG, MPU6050_MASK_ACCEL_CONFIG_AFS_SEL,
-			     (uint8_t)accel_fs);
+	int ret = mpu6050_write_mask(dev, MPU6050_REG_ACCEL_CONFIG,
+				     MPU6050_MASK_ACCEL_CONFIG_AFS_SEL, (uint8_t)accel_fs);
 	if (ret != 0) {
 		return ret;
 	}
 
-	data->config.accel_fs_mG = mG;
+	data->accel_fs = accel_fs;
 
 	return 0;
 }
@@ -369,7 +235,7 @@ int mpu6050_get_temp_mC(const struct device *dev, int16_t *tmp_mC)
 	CHECK_NULL_PTR(tmp_mC);
 
 	uint8_t tmp[2];
-	int ret = read_reg(dev, MPU6050_REG_TEMP_OUTH, tmp, sizeof(tmp));
+	int ret = mpu6050_read_reg(dev, MPU6050_REG_TEMP_OUTH, tmp, sizeof(tmp));
 	if (ret != 0) {
 		return ret;
 	}
@@ -385,21 +251,30 @@ static int mpu6050_sample_fetch(const struct device *dev, enum sensor_channel ch
 {
 	CHECK_NULL_PTR(dev);
 
-	if (chan != SENSOR_CHAN_ALL) {
+	int ret = 0;
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_XYZ:
+		ret = mpu6050_get_accel(dev);
+		break;
+
+	case SENSOR_CHAN_GYRO_XYZ:
+		ret = mpu6050_get_gyro(dev);
+		break;
+
+	case SENSOR_CHAN_ALL:
+		ret = mpu6050_get_accel(dev);
+		if (ret != 0) {
+			break;
+		}
+		ret = mpu6050_get_gyro(dev);
+		break;
+
+	default:
 		return -ENOTSUP;
-	}
+	};
 
-	int ret = mpu6050_get_accel(dev);
-	if (ret != 0) {
-		return ret;
-	}
-
-	ret = mpu6050_get_gyro(dev);
-	if (ret != 0) {
-		return ret;
-	}
-
-	return 0;
+	return ret;
 }
 
 static int mpu6050_channel_get(const struct device *dev, enum sensor_channel chan,
@@ -440,13 +315,97 @@ static int mpu6050_channel_get(const struct device *dev, enum sensor_channel cha
 }
 
 /**
+ * @brief Set a sensor attribute.
+ *
+ * @details Only @ref SENSOR_ATTR_FULL_SCALE is supported, for
+ * @ref SENSOR_CHAN_ACCEL_XYZ (in m/s^2) and @ref SENSOR_CHAN_GYRO_XYZ (in
+ * rad/s).
+ *
+ * @param[in] dev MPU6050 device instance. Must not be NULL.
+ * @param[in] chan Channel the attribute applies to.
+ * @param[in] attr Attribute to set.
+ * @param[in] val Requested attribute value. Must not be NULL.
+ *
+ * @retval 0 Attribute was set successfully.
+ * @retval -EINVAL If @p dev or @p val is NULL.
+ * @retval -ENOTSUP If @p attr or @p chan is not supported.
+ * @return Negative errno from the register write operation on failure.
+ */
+static int mpu6050_attr_set(const struct device *dev, enum sensor_channel chan,
+			    enum sensor_attribute attr, const struct sensor_value *val)
+{
+	CHECK_NULL_PTR(dev);
+	CHECK_NULL_PTR(val);
+
+	if (attr != SENSOR_ATTR_FULL_SCALE) {
+		return -ENOTSUP;
+	}
+
+	double dbl_val = sensor_value_to_double(val);
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_XYZ:
+		return mpu6050_set_accel_fs_mG(dev, mpu6050_ms2_to_mG(dbl_val));
+
+	case SENSOR_CHAN_GYRO_XYZ:
+		return mpu6050_set_gyro_fs_dps(dev, mpu6050_rad_s_to_dps(dbl_val));
+
+	default:
+		return -ENOTSUP;
+	}
+}
+
+/**
+ * @brief Get a sensor attribute.
+ *
+ * @details Only @ref SENSOR_ATTR_FULL_SCALE is supported, for
+ * @ref SENSOR_CHAN_ACCEL_XYZ (in m/s^2) and @ref SENSOR_CHAN_GYRO_XYZ (in
+ * rad/s).
+ *
+ * @param[in] dev MPU6050 device instance. Must not be NULL.
+ * @param[in] chan Channel the attribute applies to.
+ * @param[in] attr Attribute to get.
+ * @param[out] val Destination for the attribute value. Must not be NULL.
+ *
+ * @retval 0 Attribute was read successfully.
+ * @retval -EINVAL If @p dev or @p val is NULL.
+ * @retval -ENOTSUP If @p attr or @p chan is not supported.
+ */
+static int mpu6050_attr_get(const struct device *dev, enum sensor_channel chan,
+			    enum sensor_attribute attr, struct sensor_value *val)
+{
+	CHECK_NULL_PTR(dev);
+	CHECK_NULL_PTR(val);
+
+	if (attr != SENSOR_ATTR_FULL_SCALE) {
+		return -ENOTSUP;
+	}
+
+	const mpu6050_data_t *data = (const mpu6050_data_t *)dev->data;
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_XYZ:
+		sensor_value_from_double(val, mpu6050_mG_to_ms2(mpu6050_fs_to_mG(data->accel_fs)));
+		return 0;
+
+	case SENSOR_CHAN_GYRO_XYZ:
+		sensor_value_from_double(val,
+					 mpu6050_dps_to_rad_s(mpu6050_fs_to_dps(data->gyro_fs)));
+		return 0;
+
+	default:
+		return -ENOTSUP;
+	}
+}
+
+/**
  * @brief Initialize the MPU6050 driver.
  *
  * @param[in] dev MPU6050 device instance. Must not be NULL.
  *
  * @retval 0 Driver was initialized successfully.
- * @retval -EINVAL If @p dev is NULL, the I2C bus is NULL, or the configured
- * I2C address is invalid.
+ * @retval -EINVAL If @p dev is NULL.
+ * @retval -EFAULT If the I2C bus is not ready.
  * @retval -ERANGE If the WHOAMI value does not match the configured address.
  * @return Negative errno from register access or range configuration on
  * failure.
@@ -457,11 +416,6 @@ static int mpu6050_init(const struct device *dev)
 
 	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
 
-	if (dev == NULL) {
-		LOG_ERR("Null pointer to device.");
-		return -EINVAL;
-	}
-
 	bool ready = i2c_is_ready_dt(&cfg->i2c);
 	if (!ready) {
 		LOG_ERR("I2C bus is not ready.");
@@ -470,11 +424,11 @@ static int mpu6050_init(const struct device *dev)
 
 	int ret = mpu6050_check_whoami(dev);
 	if (ret != 0) {
-		return -ERANGE;
+		return ret;
 	}
 
 	// Exit sleep mode by clearing sleep bit in PWR_MGMT_1
-	ret = write_mask(dev, MPU6050_REG_PWR_MGMT_1, MPU6050_MASK_PWR_MGMT_1_SLEEP, 0);
+	ret = mpu6050_write_mask(dev, MPU6050_REG_PWR_MGMT_1, MPU6050_MASK_PWR_MGMT_1_SLEEP, 0);
 	if (ret != 0) {
 		LOG_ERR("Failed to write to wake device: %d", ret);
 		return ret;
@@ -492,16 +446,37 @@ static int mpu6050_init(const struct device *dev)
 		return ret;
 	}
 
+#ifdef CONFIG_TMI_DRIVER_MPU6050_TRIGGER
+	if (cfg->int_gpio.port != NULL) {
+		ret = mpu6050_init_interrupt(dev);
+		if (ret != 0) {
+			LOG_ERR("Init failed, could not initialize interrupt (Err %d).", ret);
+			return ret;
+		}
+	}
+#endif
+
 	LOG_INF("Initialized");
 	return 0;
 }
 
-static const struct sensor_driver_api mpu6050_api = {
+static DEVICE_API(sensor, mpu6050_api) = {
 	.sample_fetch = mpu6050_sample_fetch,
 	.channel_get = mpu6050_channel_get,
+	.attr_set = mpu6050_attr_set,
+	.attr_get = mpu6050_attr_get,
+#ifdef CONFIG_TMI_DRIVER_MPU6050_TRIGGER
+	.trigger_set = mpu6050_trigger_set,
+#endif
 };
 
 #define DT_DRV_COMPAT tmi_mpu6050
+
+#ifdef CONFIG_TMI_DRIVER_MPU6050_TRIGGER
+#define MPU6050_CONFIG_INT_GPIO(inst) .int_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),
+#else
+#define MPU6050_CONFIG_INT_GPIO(inst)
+#endif
 
 #define MPU6050_DEFINE(inst)                                                                       \
 	static mpu6050_data_t mpu6050_data_##inst;                                                 \
@@ -510,7 +485,7 @@ static const struct sensor_driver_api mpu6050_api = {
 		.i2c = I2C_DT_SPEC_INST_GET(inst),                                                 \
 		.accel_fs_mG = DT_INST_PROP(inst, accel_fs_mg),                                    \
 		.gyro_fs_dps = DT_INST_PROP(inst, gyro_fs_dps),                                    \
-	};                                                                                         \
+		MPU6050_CONFIG_INT_GPIO(inst)};                                                    \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(inst, mpu6050_init, NULL, &mpu6050_data_##inst,                      \
 			      &mpu6050_config_##inst, POST_KERNEL,                                 \

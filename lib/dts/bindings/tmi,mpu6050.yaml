@@ -11,6 +11,14 @@ include: [i2c-device.yaml]
 
 properties:
 
+  int-gpios:
+    type: phandle-array
+    description: |
+      Interrupt pin driven by the MPU6050's INT output, used for triggers
+      such as data-ready. The INT signal default configuration is
+      active-high, push-pull. The property value should ensure the flags
+      properly describe the signal presented to the driver.
+
   accel-fs-mg:
     type: int
     default: 2000
@@ -18,6 +26,11 @@ properties:
       Accelerometer full-scale range in milli-Gs.
       An X value represents a range of +/- X g.
       The power-on reset state of the sensor matches the default value of 2000.
+    enum:
+      - 2000
+      - 4000
+      - 8000
+      - 16000
 
   gyro-fs-dps:
     type: int
@@ -26,3 +39,8 @@ properties:
       Gyroscope full-scale range.
       An X value represents a range of +/- X deg/s.
       The power-on reset state of the sensor matches the default value of 250.
+    enum:
+      - 250
+      - 500
+      - 1000
+      - 2000

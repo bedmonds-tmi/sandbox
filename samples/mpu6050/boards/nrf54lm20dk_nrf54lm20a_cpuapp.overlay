@@ -20,6 +20,17 @@
 	pinctrl-0 = <&i2c30_default>;
 	pinctrl-1 = <&i2c30_sleep>;
 	pinctrl-names = "default", "sleep";
+
+	/* No int-gpios: this board demonstrates the app's polling fallback
+	 * when no interrupt pin is wired up for imu0. */
+	imu0: mpu6050@68 {
+		compatible = "tmi,mpu6050";
+		reg = <0x68>;
+		label = "MPU6050";
+		status = "okay";
+		gyro-fs-dps = <250>;
+		accel-fs-mg = <2000>;
+	};
 };
 
 / {
