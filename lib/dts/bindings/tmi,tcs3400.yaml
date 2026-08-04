@@ -1,0 +1,19 @@
+# Copyright (c) 2019 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+description: TCS3400 color sensing device
+
+compatible: "tmi,tcs3400"
+
+include: [ i2c-device.yaml ]
+
+properties:
+
+  int-gpios:
+    type: phandle-array
+    description: |
+      Interrupt pin driven by the MPU6050's INT output, used for triggers
+      such as data-ready. The INT signal default configuration is
+      active-high, push-pull. The property value should ensure the flags
+      properly describe the signal presented to the driver.
+

@@ -1,1 +1,2 @@
 rsource "mpu6050/Kconfig"
+rsource "tcs3400/Kconfig"
