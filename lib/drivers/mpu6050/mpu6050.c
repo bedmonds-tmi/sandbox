@@ -74,6 +74,7 @@ static int mpu6050_get_accel(const struct device *dev)
 	uint8_t tmp[6];
 	int ret = mpu6050_read_reg(dev, MPU6050_REG_ACCEL_XOUTH, tmp, sizeof(tmp));
 	if (ret != 0) {
+		LOG_ERR("Failed to read accel registers: %d", ret);
 		return ret;
 	}
 
@@ -111,6 +112,7 @@ static int mpu6050_get_gyro(const struct device *dev)
 	uint8_t tmp[6];
 	int ret = mpu6050_read_reg(dev, MPU6050_REG_GYRO_XOUTH, tmp, sizeof(tmp));
 	if (ret != 0) {
+		LOG_ERR("Failed to read gyro registers: %d", ret);
 		return ret;
 	}
 
@@ -285,6 +287,9 @@ static int mpu6050_channel_get(const struct device *dev, enum sensor_channel cha
 
 	mpu6050_data_t *data = (mpu6050_data_t *)dev->data;
 
+	/* Per-axis cases (X/Y/Z) are required: the sensor shell reads each
+	 * axis individually and gets -ENOTSUP without them. Sample fetch does
+	 * not need per-axis cases since the sensor shell always fetches SENSOR_CHAN_ALL. */
 	switch (chan) {
 	case SENSOR_CHAN_ACCEL_XYZ:
 		val[0] = data->accel[0];
@@ -292,10 +297,34 @@ static int mpu6050_channel_get(const struct device *dev, enum sensor_channel cha
 		val[2] = data->accel[2];
 		break;
 
+	case SENSOR_CHAN_ACCEL_X:
+		val[0] = data->accel[0];
+		break;
+
+	case SENSOR_CHAN_ACCEL_Y:
+		val[0] = data->accel[1];
+		break;
+
+	case SENSOR_CHAN_ACCEL_Z:
+		val[0] = data->accel[2];
+		break;
+
 	case SENSOR_CHAN_GYRO_XYZ:
 		val[0] = data->gyro[0];
 		val[1] = data->gyro[1];
 		val[2] = data->gyro[2];
+		break;
+
+	case SENSOR_CHAN_GYRO_X:
+		val[0] = data->gyro[0];
+		break;
+
+	case SENSOR_CHAN_GYRO_Y:
+		val[0] = data->gyro[1];
+		break;
+
+	case SENSOR_CHAN_GYRO_Z:
+		val[0] = data->gyro[2];
 		break;
 
 	case SENSOR_CHAN_ALL:
@@ -487,8 +516,8 @@ static DEVICE_API(sensor, mpu6050_api) = {
 		.gyro_fs_dps = DT_INST_PROP(inst, gyro_fs_dps),                                    \
 		MPU6050_CONFIG_INT_GPIO(inst)};                                                    \
                                                                                                    \
-	DEVICE_DT_INST_DEFINE(inst, mpu6050_init, NULL, &mpu6050_data_##inst,                      \
-			      &mpu6050_config_##inst, POST_KERNEL,                                 \
-			      CONFIG_TMI_DRIVER_MPU6050_INIT_PRIORITY, &mpu6050_api);
+	SENSOR_DEVICE_DT_INST_DEFINE(inst, mpu6050_init, NULL, &mpu6050_data_##inst,               \
+				     &mpu6050_config_##inst, POST_KERNEL,                          \
+				     CONFIG_TMI_DRIVER_MPU6050_INIT_PRIORITY, &mpu6050_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MPU6050_DEFINE)

@@ -9,6 +9,7 @@
  * of register contents.
  */
 
+#include <zephyr/kernel.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/logging/log.h>
 #include <stdint.h>
@@ -16,10 +17,24 @@
 
 LOG_MODULE_DECLARE(mpu6050);
 
+/* Retry transient I2C NACKs (e.g. bus noise from a nearby switching line)
+ * before giving up on a read. */
+#define MPU6050_I2C_MAX_RETRIES 3
+
 int mpu6050_read_reg(const struct device *dev, uint8_t reg, uint8_t *val, uint8_t len)
 {
 	const mpu6050_config_t *cfg = (const mpu6050_config_t *)dev->config;
-	return i2c_write_read_dt(&cfg->i2c, &reg, 1, val, len);
+	int ret;
+
+	for (int attempt = 0; attempt < MPU6050_I2C_MAX_RETRIES; attempt++) {
+		ret = i2c_write_read_dt(&cfg->i2c, &reg, 1, val, len);
+		if (ret == 0) {
+			return 0;
+		}
+		k_msleep(1);
+	}
+
+	return ret;
 }
 
 int mpu6050_write_reg(const struct device *dev, uint8_t reg, uint8_t val)
