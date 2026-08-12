@@ -45,16 +45,14 @@ double mpu6050_accel_fs_to_sensitivity(mpu6050_accel_fs_t fs)
 
 mpu6050_accel_fs_t mpu6050_mG_to_fs(uint32_t mG)
 {
-	for (mpu6050_accel_fs_t fs = MPU6050_ACCEL_CONF_FS_2_G; fs < MPU6050_ACCEL_CONF_FS_16_G;
+	for (mpu6050_accel_fs_t fs = MPU6050_ACCEL_CONF_FS_2_G; fs < MPU6050_ACCEL_CONF_FS_MAX;
 	     fs++) {
-		if (mG < mpu6050_accel_fs_range_mG[fs]) {
+		if (mG <= mpu6050_accel_fs_range_mG[fs]) {
 			return fs;
 		}
 	}
 
-	if (mG >= mpu6050_accel_fs_range_mG[MPU6050_ACCEL_CONF_FS_16_G]) {
-		LOG_WRN("MPU6050 can't achieve %d mG, clamping to 16 G", mG);
-	}
+	LOG_WRN("MPU6050 can't achieve %d mG, clamping to 16 G", mG);
 
 	return MPU6050_ACCEL_CONF_FS_16_G;
 }
@@ -86,7 +84,7 @@ mpu6050_gyro_fs_t mpu6050_dps_to_fs(int32_t dps)
 {
 	for (mpu6050_gyro_fs_t fs = MPU6050_GYRO_CONF_FS_250_DPS; fs < MPU6050_GYRO_CONF_FS_MAX;
 	     fs++) {
-		if (dps < mpu6050_gyro_fs_range_dps[fs]) {
+		if (dps <= (int32_t)mpu6050_gyro_fs_range_dps[fs]) {
 			return fs;
 		}
 	}

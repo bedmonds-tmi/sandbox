@@ -1,8 +1,8 @@
 config TMI_DRIVER_MPU6050
 	bool "Enable MPU6050 IMU"
-	default n
+	default y
+	depends on DT_HAS_TMI_MPU6050_ENABLED
 	select I2C
-	select FPU
 	select SENSOR
 	help
 	  MPU6050 enable
@@ -18,7 +18,7 @@ if TMI_DRIVER_MPU6050
 
 choice TMI_DRIVER_MPU6050_TRIGGER_MODE
 	prompt "Trigger mode"
-	default TMI_DRIVER_MPU6050_TRIGGER_NONE
+	default TMI_DRIVER_MPU6050_TRIGGER_GLOBAL_THREAD
 	help
 	  Specify the type of triggering used by the driver.
 
@@ -28,11 +28,13 @@ config TMI_DRIVER_MPU6050_TRIGGER_NONE
 config TMI_DRIVER_MPU6050_TRIGGER_GLOBAL_THREAD
 	bool "Use global thread"
 	depends on GPIO
+	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_TMI_MPU6050),int-gpios)
 	select TMI_DRIVER_MPU6050_TRIGGER
 
 config TMI_DRIVER_MPU6050_TRIGGER_OWN_THREAD
 	bool "Use own thread"
 	depends on GPIO
+	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_TMI_MPU6050),int-gpios)
 	select TMI_DRIVER_MPU6050_TRIGGER
 
 endchoice
