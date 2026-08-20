@@ -8,6 +8,9 @@ manifest:
     - name: zephyr_sdk
       url-base: https://github.com/zephyrproject-rtos
 
+    - name: tmi
+      url-base: https://github.com/trudellmedicalinternational
+
   projects:
     - name: zephyr
       remote: zephyr_sdk
@@ -20,3 +23,12 @@ manifest:
           - zephyr
           - cmsis_6
           - hal_nordic
+
+    # Drivers and bindings shared across TMI firmware. The sandbox samples
+    # exercise these directly, so they are consumed from here rather than
+    # copied in.
+    - name: tmi_common_library
+      remote: tmi
+      repo-path: common-firmware-library
+      revision: main
+      path: deps/tmi
