@@ -1,3 +1,0 @@
-zephyr_library()
-zephyr_library_sources(mpu6050.c mpu6050_bus.c mpu6050_utils.c)
-zephyr_library_sources_ifdef(CONFIG_TMI_DRIVER_MPU6050_TRIGGER mpu6050_trigger.c)

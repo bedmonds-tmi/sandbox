@@ -1,3 +1,0 @@
-zephyr_library()
-zephyr_library_sources(tcs3400.c tcs3400_utils.c tcs3400_bus.c)
-zephyr_library_sources_ifdef(CONFIG_TMI_DRIVER_TCS3400_TRIGGER tcs3400_trigger.c)

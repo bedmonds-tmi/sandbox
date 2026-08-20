@@ -1,6 +1,24 @@
-/ {
-	aliases {
-		i2c0 = &i2c0;
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+
+/*
+ * TCS3400 on i2c0 (P0.26 SDA / P0.27 SCL, the DK defaults), with its INT
+ * output on P0.02 and the white illumination LED driven from pwm0 channel 0
+ * on P0.03.
+ */
+
+&pinctrl {
+	pwm0_tcs3400_default: pwm0_tcs3400_default {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 0, 3)>;
+		};
+	};
+
+	pwm0_tcs3400_sleep: pwm0_tcs3400_sleep {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 0, 3)>;
+			low-power-enable;
+		};
 	};
 };
 
@@ -10,11 +28,54 @@
 	pinctrl-1 = <&i2c0_sleep>;
 	pinctrl-names = "default", "sleep";
 
-	p1: tcs3400@39 {
+	/*
+	 * The INT output is open-drain and active-low, so it needs a pull-up.
+	 * The internal one is requested here rather than fitting an external
+	 * resistor, since this is the only device on the line.
+	 *
+	 * 4x gain over 64 integration cycles (178 ms) is a starting point for
+	 * a close-range target under the white LED, not a calibrated setting.
+	 * The sample retunes both at runtime through SENSOR_ATTR_GAIN and
+	 * SENSOR_ATTR_OVERSAMPLING.
+	 */
+	color_sensor: tcs3400@39 {
 		compatible = "tmi,tcs3400";
-		reg = <0x39>;
 		status = "okay";
-		label = "TCS3400";
-		int-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		reg = <0x39>;
+		int-gpios = <&gpio0 2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		gain-x = <4>;
+		integration-cycles = <64>;
+	};
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-0 = <&pwm0_tcs3400_default>;
+	pinctrl-1 = <&pwm0_tcs3400_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+/ {
+	/*
+	 * The LED driver takes a single PWM input that acts as both its enable
+	 * and its brightness control, so there is no separate enable GPIO -- a
+	 * 0% duty cycle is off.
+	 *
+	 * A 1 ms period puts ~178 full PWM cycles inside the shortest
+	 * integration window the sensor is configured for, so brightness is
+	 * averaged out rather than beating against the conversion.
+	 */
+	pwmleds {
+		compatible = "pwm-leds";
+
+		white_pwm_led: white_pwm_led {
+			pwms = <&pwm0 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+			label = "White illumination LED";
+		};
+	};
+
+	aliases {
+		color-sensor = &color_sensor;
+		white-led-pwm = &white_pwm_led;
 	};
 };
