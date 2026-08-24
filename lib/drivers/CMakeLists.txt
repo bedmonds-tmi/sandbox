@@ -1,0 +1,1 @@
+add_subdirectory_ifdef(CONFIG_TMI_DRIVER_XGZP6897D xgzp6897d)
