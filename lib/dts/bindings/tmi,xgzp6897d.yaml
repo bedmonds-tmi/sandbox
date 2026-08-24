@@ -1,0 +1,4 @@
+description: xgzp6897d dual port differential pressure monitoring device.
+compatible: "tmi,xgzp6897d"
+
+include: [ i2c-device.yaml ]
