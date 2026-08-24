@@ -4,7 +4,7 @@
 
 LOG_MODULE_REGISTER(app);
 
-const struct device *imu0 = DEVICE_DT_GET(DT_NODELABEL(imu0));
+const struct device *imu = DEVICE_DT_GET(DT_NODELABEL(imu));
 
 #define ERROR_LOOP(...)                                                                            \
 	do {                                                                                       \
@@ -50,9 +50,9 @@ int main(void)
 		.chan = SENSOR_CHAN_ACCEL_XYZ,
 	};
 
-	/* -ENOTSUP means the board has no int-gpios wired up for imu0; fall
+	/* -ENOTSUP means the board has no int-gpios wired up for imu; fall
 	 * back to polling so the same app works either way. */
-	int ret = sensor_trigger_set(imu0, &trig, data_ready_handler);
+	int ret = sensor_trigger_set(imu, &trig, data_ready_handler);
 	if (ret == 0) {
 		LOG_INF("Data-ready interrupt configured, waiting for samples");
 		while (1) {
@@ -62,15 +62,15 @@ int main(void)
 		ERROR_LOOP("Failed to set data ready trigger: %d", ret);
 	}
 
-	LOG_INF("No int-gpios for imu0, polling instead");
+	LOG_INF("No int-gpios for imu, polling instead");
 
 	while (1) {
-		ret = sensor_sample_fetch_chan(imu0, SENSOR_CHAN_ACCEL_XYZ);
+		ret = sensor_sample_fetch_chan(imu, SENSOR_CHAN_ACCEL_XYZ);
 		if (ret != 0) {
 			LOG_ERR("Get Accel failed: %d", ret);
 		}
 
-		print_accel(imu0);
+		print_accel(imu);
 
 		k_msleep(500);
 	}
