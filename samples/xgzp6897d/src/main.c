@@ -13,8 +13,7 @@ const struct device *p1 = DEVICE_DT_GET(DT_NODELABEL(p1));
 
 int main(void)
 {
-	uint32_t start_time = k_uptime_get_32();
-	uint32_t elapsed = 0;
+	uint32_t start_time;
 	int sample_count = 0;
 	int ret = 0;
 	double avg = 0;
@@ -26,7 +25,7 @@ int main(void)
 		return -ENODEV;
 	}
 
-	LOG_INF("DATA_START\n");
+	LOG_INF("DATA_START");
 
 	// PHASE 1: CALIBRATION (Find Offset)
 	LOG_INF("Starting calibration...");
@@ -57,7 +56,9 @@ int main(void)
 
 	// PHASE 2: MEASUREMENT (Apply Offset)
 	LOG_INF("Starting measurement...");
-	LOG_INF("Time(ms),Pressure(Pa)\n");
+	LOG_INF("Time(ms),Pressure(Pa)");
+
+	start_time = k_uptime_get_32();
 
 	while (sample_count < MAX_SAMPLES) {
 		struct sensor_value diff_pressure;
@@ -67,13 +68,13 @@ int main(void)
 		if (ret == 0) {
 			ret = sensor_channel_get(p1, SENSOR_CHAN_PRESS, &diff_pressure);
 			if (ret == 0) {
-				elapsed = k_uptime_get_32() - start_time;
+				uint32_t elapsed = k_uptime_get_32() - start_time;
 				ans = sensor_value_to_double(&diff_pressure);
 
 				// Incorporate the calibrated offset
 				ans = ans - offset;
 
-				LOG_INF("%u,%0.3f\n", elapsed, ans);
+				LOG_INF("%u,%0.3f", elapsed, ans);
 				sum += ans;
 				sample_count++;
 			}
@@ -84,7 +85,8 @@ int main(void)
 	}
 
 	avg = sum / MAX_SAMPLES;
-	LOG_INF("DATA_END\nFINAL AVG = %0.3f\n", avg);
+	LOG_INF("DATA_END");
+	LOG_INF("FINAL AVG = %0.3f", avg);
 
 	// Infinite sleep loop
 	while (1) {
