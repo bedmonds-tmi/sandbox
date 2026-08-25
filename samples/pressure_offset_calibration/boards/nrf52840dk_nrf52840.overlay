@@ -1,0 +1,19 @@
+/ {
+	aliases {
+		i2c0 = &i2c0;
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	p1: xgzp6897d@58 {
+		compatible = "tmi,xgzp6897d";
+		reg = <0x58>;
+		status = "okay";
+		label = " XGZP6897D";
+	};
+};
