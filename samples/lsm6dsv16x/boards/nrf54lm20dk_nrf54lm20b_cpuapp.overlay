@@ -1,0 +1,60 @@
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/sensor/lsm6dsv16x.h>
+
+/*
+ * The sensor is wired to P1.12/P1.13. On nRF54L a peripheral can only reach
+ * GPIOs in its own power domain, and TWIM30 (i2c@104000) sits in the same
+ * domain as P0/gpiote30 -- it cannot drive P1 at all. i2c20 would reach P1
+ * but shares 0xc6000 with uart20, the console. Hence i2c21 (0xc7000).
+ */
+
+&pinctrl {
+	i2c21_default: i2c21_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 12)>,
+				<NRF_PSEL(TWIM_SCL, 1, 13)>;
+		};
+	};
+
+	i2c21_sleep: i2c21_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 12)>,
+				<NRF_PSEL(TWIM_SCL, 1, 13)>;
+			low-power-enable;
+		};
+	};
+};
+
+&uart20 {
+	current-speed = <921600>;
+};
+
+&i2c21 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&i2c21_default>;
+	pinctrl-1 = <&i2c21_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	imu: lsm6dsv16x@6b {
+		compatible = "tmi,lsm6dsv16x";
+		reg = <0x6b>;
+		label = "imu";
+
+		/* 7680Hz overruns the 400kHz bus and wedges the driver's stream. */
+		accel-odr = <LSM6DSVXXX_DT_ODR_AT_3840Hz>;
+		accel-range = <LSM6DSV16X_DT_FS_16G>;
+		gyro-odr = <LSM6DSVXXX_DT_ODR_AT_15Hz>;
+		/* Max the WTM field holds: 255 accel samples per interrupt. */
+		fifo-watermark = <255>;
+		/* Batched at the ODR, so the FIFO keeps every sample. */
+		accel-fifo-batch-rate = <LSM6DSVXXX_DT_XL_BATCHED_AT_3840Hz>;
+		gyro-fifo-batch-rate = <LSM6DSVXXX_DT_GY_NOT_BATCHED>;
+		temp-fifo-batch-rate = <LSM6DSVXXX_DT_TEMP_NOT_BATCHED>;
+
+		int1-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+
+		/* Latched DRDY can rise before the GPIO is armed, losing the edge. */
+		drdy-pulsed;
+	};
+};

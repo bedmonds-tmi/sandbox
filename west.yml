@@ -23,6 +23,7 @@ manifest:
           - zephyr
           - cmsis_6
           - hal_nordic
+          - hal_st
 
     # Drivers and bindings shared across TMI firmware. The sandbox samples
     # exercise these directly, so they are consumed from here rather than
