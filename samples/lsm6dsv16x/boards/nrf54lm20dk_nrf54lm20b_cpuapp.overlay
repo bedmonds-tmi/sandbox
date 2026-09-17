@@ -2,10 +2,16 @@
 #include <zephyr/dt-bindings/sensor/lsm6dsv16x.h>
 
 /*
- * The sensor is wired to P1.12/P1.13. On nRF54L a peripheral can only reach
- * GPIOs in its own power domain, and TWIM30 (i2c@104000) sits in the same
- * domain as P0/gpiote30 -- it cannot drive P1 at all. i2c20 would reach P1
- * but shares 0xc6000 with uart20, the console. Hence i2c21 (0xc7000).
+ * The sensor is wired to P1.12 (SDA) / P1.13 (SCL), with INT1 on P1.15. On
+ * nRF54L a peripheral can only reach GPIOs in its own power domain, and TWIM30
+ * (i2c@104000) sits in the same domain as P0/gpiote30 -- it cannot drive P1 at
+ * all. i2c20 would reach P1 but shares 0xc6000 with uart20, the console. Hence
+ * i2c21 (0xc7000).
+ *
+ * P1.12 and P1.13 are shared with the part's SPI SDI and SPC. P1.14 is SDO,
+ * which in I2C mode is the SA0 address bit -- left floating high by the board,
+ * hence reg 0x6b rather than 0x6a. See ../../lsm6dsv16x_spi for the SPI wiring
+ * of the same part.
  */
 
 &pinctrl {
@@ -52,7 +58,7 @@
 		gyro-fifo-batch-rate = <LSM6DSVXXX_DT_GY_NOT_BATCHED>;
 		temp-fifo-batch-rate = <LSM6DSVXXX_DT_TEMP_NOT_BATCHED>;
 
-		int1-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		int1-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
 
 		/* Latched DRDY can rise before the GPIO is armed, losing the edge. */
 		drdy-pulsed;
