@@ -1,0 +1,101 @@
+#include <zephyr/dt-bindings/sensor/lsm6dsv16x.h>
+
+/*
+ * Same part, same four pins, SPI instead of I2C. The part multiplexes the two
+ * buses onto one pad set:
+ *
+ *   P1.12  SDI  (MOSI)  -- SDA in I2C mode
+ *   P1.13  SPC  (SCK)   -- SCL in I2C mode
+ *   P1.14  SDO  (MISO)  -- SA0 address bit in I2C mode
+ *   P1.15  INT1
+ *   P1.11  CS
+ *
+ * CS is what selects the bus: the part enters SPI mode on the first falling
+ * edge of CS and stays there. The board strapped CS high for I2C, so this
+ * overlay only works once CS is cut from VDD and run to P1.11. Until then init
+ * reads a floating SDO, logs "chip id 0x0" and the device never becomes ready.
+ *
+ * spi21 (0xc7000) is the same SERIAL instance as the I2C sample's i2c21, chosen
+ * for the same reason: on nRF54L a peripheral only reaches GPIOs in its own
+ * power domain, SPIM30 cannot drive P1 at all, and spi20 shares 0xc6000 with
+ * uart20, the console. The two samples therefore cannot both be flashed -- they
+ * claim the same peripheral.
+ */
+
+&pinctrl {
+	spi21_default: spi21_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 12)>;
+		};
+
+		/*
+		 * SDO is high-Z whenever CS is high, so without a bias the MISO
+		 * pad floats and WHO_AM_I reads noise. Pulling it down makes an
+		 * unwired part read a steady 0x00 instead, which is the
+		 * difference between "CS is still strapped" and "the bus is
+		 * flaky". The sensor drives the pad push-pull once selected, so
+		 * the pull costs nothing in normal operation.
+		 */
+		group2 {
+			psels = <NRF_PSEL(SPIM_MISO, 1, 14)>;
+			bias-pull-down;
+		};
+	};
+
+	spi21_sleep: spi21_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 12)>,
+				<NRF_PSEL(SPIM_MISO, 1, 14)>;
+			low-power-enable;
+		};
+	};
+};
+
+&uart20 {
+	current-speed = <921600>;
+};
+
+&spi21 {
+	status = "okay";
+	pinctrl-0 = <&spi21_default>;
+	pinctrl-1 = <&spi21_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	/* Plain GPIO, not a pinctrl signal -- nrfx drives CS in software. */
+	cs-gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
+
+	imu: lsm6dsv16x@0 {
+		compatible = "tmi,lsm6dsv16x";
+		reg = <0>;
+		label = "imu";
+
+		/*
+		 * 8MHz is spi21's ceiling; the part is good to 10MHz. That is
+		 * 20x the I2C sample's 400kHz, which is what makes 7680Hz
+		 * reachable here and not there: a 255-row batch is 1785 bytes,
+		 * 1.8ms at 8MHz, against a 33ms watermark period.
+		 */
+		spi-max-frequency = <8000000>;
+
+		/* Mode 3: clock idles high, SDI sampled on the rising edge. */
+		spi-cpol;
+		spi-cpha;
+
+		accel-odr = <LSM6DSVXXX_DT_ODR_AT_7680Hz>;
+		accel-range = <LSM6DSV16X_DT_FS_16G>;
+		gyro-odr = <LSM6DSVXXX_DT_ODR_AT_15Hz>;
+		/* Max the WTM field holds: 255 accel samples per interrupt. */
+		fifo-watermark = <255>;
+		/* Batched at the ODR, so the FIFO keeps every sample. */
+		accel-fifo-batch-rate = <LSM6DSVXXX_DT_XL_BATCHED_AT_7680Hz>;
+		gyro-fifo-batch-rate = <LSM6DSVXXX_DT_GY_NOT_BATCHED>;
+		temp-fifo-batch-rate = <LSM6DSVXXX_DT_TEMP_NOT_BATCHED>;
+
+		int1-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+
+		/* Latched DRDY can rise before the GPIO is armed, losing the edge. */
+		drdy-pulsed;
+	};
+};
