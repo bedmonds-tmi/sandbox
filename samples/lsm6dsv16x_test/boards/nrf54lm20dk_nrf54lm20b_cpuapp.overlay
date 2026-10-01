@@ -1,0 +1,41 @@
+&pinctrl {
+	spi22_default: spi22_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 14)>,
+				<NRF_PSEL(SPIM_MISO, 1, 15)>;
+		};
+	};
+
+	/* Define the sleep state so the devicetree compiler is happy */
+	spi22_sleep: spi22_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 14)>,
+				<NRF_PSEL(SPIM_MISO, 1, 15)>;
+			low-power-enable; /* Standard Nordic sleep config */
+		};
+	};
+};
+
+&uart20 {
+	current-speed = <921600>;
+};
+
+&spi22 {
+	status = "okay";
+
+	/* Map the active and sleep states */
+	pinctrl-0 = <&spi22_default>;
+	pinctrl-1 = <&spi22_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>;
+
+	lsm6dsv16x: lsm6dsv16x@0 {
+		compatible = "st,lsm6dsv16x";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+	};
+};
+
