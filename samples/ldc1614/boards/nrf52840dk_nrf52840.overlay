@@ -1,0 +1,23 @@
+&i2c0 {
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	dev0: ldc1614@2a {
+		compatible = "tmi,ldc1614";
+		reg = <0x2a>;
+		label = "LDC1614";
+		status = "okay";
+
+		ext-clk;
+
+		rr-sequence = <0>;
+		deglitch-bw = <5>;
+
+		rcount = <0xffff 0xffff 0xffff 0xffff>;
+		settlecount = <0x0010 0x0010 0x0010 0x0010>;
+		fin-divider = <1 1 1 1>;
+		fref-divider = <2 2 2 2>;
+		idrive = <18 18 18 18>;
+	};
+};
