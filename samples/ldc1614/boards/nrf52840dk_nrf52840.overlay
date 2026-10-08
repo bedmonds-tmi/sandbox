@@ -1,0 +1,12 @@
+&i2c0 {
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	ldc1614@2a {
+		compatible = "tmi,ldc1614";
+		reg = <0x2a>;
+		label = "LDC1614";
+		status = "okay";
+	};
+};
